@@ -7,7 +7,7 @@ import { calculateReadiness, getTrainingLoad } from "../training/readiness-servi
 const systemPrompt = `You are a personal AI running assistant inside Telegram.
 
 You help the user make daily and weekly running decisions using:
-- Strava running activities
+- Apple Health workout history from Health Auto Export
 - Apple Health recovery data from Health Auto Export
 - user goals
 - recent training load
@@ -76,33 +76,36 @@ function isTrainingRequest(message: string) {
 
 async function getRecentRuns(userId: string) {
   const from = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000);
-  const runs = await prisma.stravaActivity.findMany({
+  const runs = await prisma.healthWorkout.findMany({
     where: {
       userId,
-      isDeleted: false,
-      startDate: { gte: from },
+      date: { gte: from },
+      OR: [
+        { workoutType: { contains: "run", mode: "insensitive" } },
+        { workoutType: { contains: "running", mode: "insensitive" } },
+        { workoutType: { contains: "jog", mode: "insensitive" } },
+        { workoutType: { contains: "treadmill", mode: "insensitive" } },
+      ],
     },
-    orderBy: { startDate: "desc" },
+    orderBy: { date: "desc" },
     take: 20,
     select: {
-      startDate: true,
-      name: true,
-      sportType: true,
+      date: true,
+      workoutType: true,
       distanceMeters: true,
-      movingTimeSeconds: true,
-      averageHeartrate: true,
-      sufferScore: true,
+      durationSeconds: true,
+      averageHeartRate: true,
+      calories: true,
     },
   });
 
   return runs.map((run) => ({
-    date: run.startDate.toISOString(),
-    name: run.name,
-    sportType: run.sportType,
+    date: run.date.toISOString(),
+    workoutType: run.workoutType,
     distanceMeters: run.distanceMeters,
-    movingTimeSeconds: run.movingTimeSeconds,
-    averageHeartrate: run.averageHeartrate,
-    sufferScore: run.sufferScore,
+    durationSeconds: run.durationSeconds,
+    averageHeartRate: run.averageHeartRate,
+    calories: run.calories,
   }));
 }
 

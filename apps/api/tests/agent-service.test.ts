@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const prismaMock = {
   user: { findUnique: vi.fn() },
-  stravaActivity: { findMany: vi.fn() },
+  healthWorkout: { findMany: vi.fn() },
 };
 const getRecentConversation = vi.fn();
 const getHealthSummary = vi.fn();
@@ -56,15 +56,14 @@ describe("runAgent", () => {
       daily: [{ date: "2026-04-29", sleepMinutes: 430, restingHeartRate: 52, hrvMs: 65, vo2max: 48, steps: 9000 }],
       workouts: [],
     });
-    prismaMock.stravaActivity.findMany.mockResolvedValue([
+    prismaMock.healthWorkout.findMany.mockResolvedValue([
       {
-        startDate: new Date("2026-04-28T07:00:00Z"),
-        name: "Morning Run",
-        sportType: "Run",
+        date: new Date("2026-04-28T07:00:00Z"),
+        workoutType: "Running",
         distanceMeters: 5000,
-        movingTimeSeconds: 1800,
-        averageHeartrate: 136,
-        sufferScore: 20,
+        durationSeconds: 1800,
+        averageHeartRate: 136,
+        calories: 320,
         rawJson: { shouldNotLeak: true },
       },
     ]);
@@ -95,7 +94,7 @@ describe("runAgent", () => {
     expect(calculateReadiness).not.toHaveBeenCalled();
     expect(getTrainingLoad).not.toHaveBeenCalled();
     expect(getHealthSummary).not.toHaveBeenCalled();
-    expect(prismaMock.stravaActivity.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.healthWorkout.findMany).not.toHaveBeenCalled();
   });
 
   it("adds deterministic context for health data questions", async () => {
@@ -131,7 +130,7 @@ describe("runAgent", () => {
       daily: [{ date: "2026-04-29", sleepMinutes: 440, restingHeartRate: 51, hrvMs: 70, vo2max: null, steps: 10200 }],
       workouts: [],
     });
-    prismaMock.stravaActivity.findMany.mockResolvedValue([]);
+    prismaMock.healthWorkout.findMany.mockResolvedValue([]);
 
     const { runAgent } = await import("../src/agent/agent-service.js");
     await runAgent({ telegramUserId: "42", message: "выпиши мои все данные по здоровью за вчера" });

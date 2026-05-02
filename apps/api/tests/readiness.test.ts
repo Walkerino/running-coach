@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const prismaMock = {
   user: { findUnique: vi.fn() },
   healthDaily: { findMany: vi.fn() },
-  stravaActivity: { findMany: vi.fn() },
+  healthWorkout: { findMany: vi.fn() },
   subjectiveFeedback: { findFirst: vi.fn() },
   readinessScore: { upsert: vi.fn() },
 };
@@ -29,17 +29,13 @@ describe("calculateReadiness", () => {
         { date: new Date("2026-04-24"), sleepMinutes: 450, restingHeartRate: 51, hrvMs: 68 },
         { date: new Date("2026-04-23"), sleepMinutes: 440, restingHeartRate: 52, hrvMs: 70 },
       ]);
-    prismaMock.stravaActivity.findMany.mockResolvedValue([
+    prismaMock.healthWorkout.findMany.mockResolvedValue([
       {
-        startDate: new Date("2026-04-24T08:00:00Z"),
+        date: new Date("2026-04-24T08:00:00Z"),
         distanceMeters: 7000,
-        averageHeartrate: 155,
-        movingTimeSeconds: 2200,
-        type: "Run",
-        sportType: "Run",
-        sufferScore: 60,
-        averageSpeed: null,
-        maxHeartrate: null,
+        averageHeartRate: 155,
+        durationSeconds: 2200,
+        workoutType: "Running",
       },
     ]);
     prismaMock.subjectiveFeedback.findFirst.mockResolvedValue({

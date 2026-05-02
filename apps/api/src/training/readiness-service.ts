@@ -1,5 +1,5 @@
 import { RecommendationType, ReadinessStatus } from "@prisma/client";
-import type { StravaActivity } from "@prisma/client";
+import type { HealthWorkout } from "@prisma/client";
 
 import { prisma } from "../db/prisma.js";
 import type { ReadinessResult, TrainingLoadSummary } from "../types.js";
@@ -13,32 +13,38 @@ function average(values: Array<number | null | undefined>): number | null {
   return normalized.reduce((sum, value) => sum + value, 0) / normalized.length;
 }
 
+function isRunningWorkout(activity: Pick<HealthWorkout, "workoutType">) {
+  const label = (activity.workoutType ?? "").toLowerCase();
+  return (
+    label.includes("run") ||
+    label.includes("running") ||
+    label.includes("jog") ||
+    label.includes("treadmill")
+  );
+}
+
 function classifyRun(
-  activity: Pick<StravaActivity, "averageHeartrate" | "sufferScore" | "movingTimeSeconds" | "type" | "sportType">,
+  activity: Pick<HealthWorkout, "averageHeartRate" | "durationSeconds" | "workoutType">,
   easyHrMin = 130,
   easyHrMax = 140,
 ): "easy" | "hard" | "unknown" {
-  const label = `${activity.sportType ?? ""} ${activity.type ?? ""}`.toLowerCase();
+  const label = (activity.workoutType ?? "").toLowerCase();
   if (label.includes("interval") || label.includes("workout") || label.includes("race")) {
     return "hard";
   }
 
-  if (activity.sufferScore && activity.sufferScore >= 50) {
-    return "hard";
-  }
-
-  if (activity.averageHeartrate == null || activity.movingTimeSeconds == null) {
+  if (activity.averageHeartRate == null || activity.durationSeconds == null) {
     return "unknown";
   }
 
-  if (activity.averageHeartrate > easyHrMax + 10 || activity.movingTimeSeconds > 70 * 60) {
+  if (activity.averageHeartRate > easyHrMax + 10 || activity.durationSeconds > 70 * 60) {
     return "hard";
   }
 
   if (
-    activity.averageHeartrate >= easyHrMin &&
-    activity.averageHeartrate <= easyHrMax &&
-    activity.movingTimeSeconds <= 60 * 60
+    activity.averageHeartRate >= easyHrMin &&
+    activity.averageHeartRate <= easyHrMax &&
+    activity.durationSeconds <= 60 * 60
   ) {
     return "easy";
   }
@@ -48,32 +54,32 @@ function classifyRun(
 
 export async function getTrainingLoad(userId: string, days: number): Promise<TrainingLoadSummary> {
   const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-  const activities = await prisma.stravaActivity.findMany({
+  const activities = await prisma.healthWorkout.findMany({
     where: {
       userId,
-      startDate: { gte: from },
-      isDeleted: false,
+      date: { gte: from },
     },
-    orderBy: { startDate: "desc" },
+    orderBy: { date: "desc" },
   });
+  const runs = activities.filter(isRunningWorkout);
 
-  const lastWeekDistance = activities
-    .filter((item: StravaActivity) => item.startDate >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
-    .reduce((sum: number, item: StravaActivity) => sum + (item.distanceMeters ?? 0), 0);
+  const lastWeekDistance = runs
+    .filter((item: HealthWorkout) => item.date >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+    .reduce((sum: number, item: HealthWorkout) => sum + (item.distanceMeters ?? 0), 0);
 
   const distanceByWeek = [0, 1, 2, 3].map((weekIndex) => {
     const end = new Date(Date.now() - weekIndex * 7 * 24 * 60 * 60 * 1000);
     const start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
     return (
-      activities
-        .filter((item: StravaActivity) => item.startDate >= start && item.startDate < end)
-        .reduce((sum: number, item: StravaActivity) => sum + (item.distanceMeters ?? 0), 0) / 1000
+      runs
+        .filter((item: HealthWorkout) => item.date >= start && item.date < end)
+        .reduce((sum: number, item: HealthWorkout) => sum + (item.distanceMeters ?? 0), 0) / 1000
     );
   });
 
-  const recentHardSessions = activities.filter((item: StravaActivity) =>
+  const recentHardSessions = runs.filter((item: HealthWorkout) =>
     classifyRun(item, 130, 140) === "hard" &&
-    item.startDate >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    item.date >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
   ).length;
 
   return {
@@ -82,7 +88,7 @@ export async function getTrainingLoad(userId: string, days: number): Promise<Tra
       (distanceByWeek.reduce((sum, value) => sum + value, 0) / distanceByWeek.length).toFixed(1),
     ),
     recentHardSessions,
-    recentRuns: activities.length,
+    recentRuns: runs.length,
   };
 }
 
@@ -97,9 +103,9 @@ export async function calculateReadiness(userId: string, date = startOfToday()):
       where: { userId, date: { gte: new Date(date.getTime() - 28 * 24 * 60 * 60 * 1000) } },
       orderBy: { date: "desc" },
     }),
-    prisma.stravaActivity.findMany({
-      where: { userId, startDate: { gte: new Date(date.getTime() - 28 * 24 * 60 * 60 * 1000) }, isDeleted: false },
-      orderBy: { startDate: "desc" },
+    prisma.healthWorkout.findMany({
+      where: { userId, date: { gte: new Date(date.getTime() - 28 * 24 * 60 * 60 * 1000) } },
+      orderBy: { date: "desc" },
     }),
     prisma.subjectiveFeedback.findFirst({
       where: { userId, date: { lte: date } },
@@ -113,19 +119,18 @@ export async function calculateReadiness(userId: string, date = startOfToday()):
   const baselineSleep = average(health28.map((item) => item.sleepMinutes));
   const baselineRhr = average(health28.map((item) => item.restingHeartRate));
   const baselineHrv = average(health28.map((item) => item.hrvMs));
-  const recentHard = activities28.filter(
-    (item: StravaActivity) =>
-      classifyRun(item, easyHrMin, easyHrMax) === "hard" &&
-      item.startDate >= new Date(date.getTime() - 72 * 60 * 60 * 1000),
+  const runningActivities28 = activities28.filter(isRunningWorkout);
+  const recentHard = runningActivities28.filter(
+    (item: HealthWorkout) => classifyRun(item, easyHrMin, easyHrMax) === "hard" && item.date >= new Date(date.getTime() - 72 * 60 * 60 * 1000),
   );
   const hardIn48h = recentHard.some(
-    (item: StravaActivity) => item.startDate >= new Date(date.getTime() - 48 * 60 * 60 * 1000),
+    (item: HealthWorkout) => item.date >= new Date(date.getTime() - 48 * 60 * 60 * 1000),
   );
-  const weeklyDistanceMeters = activities28
-    .filter((item: StravaActivity) => item.startDate >= new Date(date.getTime() - 7 * 24 * 60 * 60 * 1000))
-    .reduce((sum: number, item: StravaActivity) => sum + (item.distanceMeters ?? 0), 0);
-  const fourWeekAvgMeters = activities28.reduce(
-    (sum: number, item: StravaActivity) => sum + (item.distanceMeters ?? 0),
+  const weeklyDistanceMeters = runningActivities28
+    .filter((item: HealthWorkout) => item.date >= new Date(date.getTime() - 7 * 24 * 60 * 60 * 1000))
+    .reduce((sum: number, item: HealthWorkout) => sum + (item.distanceMeters ?? 0), 0);
+  const fourWeekAvgMeters = runningActivities28.reduce(
+    (sum: number, item: HealthWorkout) => sum + (item.distanceMeters ?? 0),
     0,
   ) / 4;
 
@@ -194,10 +199,10 @@ export async function calculateReadiness(userId: string, date = startOfToday()):
     recommendationType = RecommendationType.long_easy;
   }
 
-  const qualitySessionsThisWeek = activities28.filter(
-    (item: StravaActivity) =>
+  const qualitySessionsThisWeek = runningActivities28.filter(
+    (item: HealthWorkout) =>
       classifyRun(item, easyHrMin, easyHrMax) === "hard" &&
-      item.startDate >= new Date(date.getTime() - 7 * 24 * 60 * 60 * 1000),
+      item.date >= new Date(date.getTime() - 7 * 24 * 60 * 60 * 1000),
   ).length;
 
   if (recommendationType === RecommendationType.quality_session && qualitySessionsThisWeek >= 1) {

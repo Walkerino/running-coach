@@ -6,7 +6,6 @@ import { runAgent } from "../agent/agent-service.js";
 import { saveConversationMessage } from "../services/conversation-service.js";
 import { deleteUserData, ensureUserFromTelegram, getUserByTelegramId } from "../services/user-service.js";
 import { buildUserSummary } from "../services/summary-service.js";
-import { syncStravaActivities } from "../strava/strava-service.js";
 
 export const bot = new Bot(env.TELEGRAM_BOT_TOKEN);
 
@@ -74,25 +73,10 @@ bot.command("start", async (ctx) => {
   await ctx.reply(
     [
       `Hi ${user.firstName ?? "runner"}. This is your AI running assistant inside Telegram.`,
-      "Connect Strava with /connect_strava and configure Health Auto Export using your personal health export token from /profile.",
+      "Connect Apple Health via Health Auto Export using your personal health export token from /profile.",
       "You can then ask natural questions like: Should I run today?",
     ].join("\n\n"),
   );
-});
-
-bot.command("connect_strava", async (ctx) => {
-  const from = requireFrom(ctx);
-  const telegramId = String(from.id);
-  await ensureUserFromTelegram({
-    telegramId,
-    username: from.username,
-    firstName: from.first_name,
-  });
-
-  const url = new URL(`${env.PUBLIC_BASE_URL}/auth/strava/start`);
-  url.searchParams.set("telegramId", telegramId);
-
-  await ctx.reply(`Connect Strava here:\n${url.toString()}`);
 });
 
 bot.command("profile", async (ctx) => {
@@ -125,8 +109,7 @@ bot.command("set_goal", async (ctx) => {
 bot.command("privacy", async (ctx) => {
   await ctx.reply(
     [
-      "Stored data: Telegram profile, running profile, Strava activities, Health Auto Export summaries, readiness scores, and optional conversation context.",
-      "Strava tokens are encrypted at rest.",
+      "Stored data: Telegram profile, running profile, Apple Health workout and recovery summaries from Health Auto Export, readiness scores, and optional conversation context.",
       "Raw health payloads are stored for traceability but are not logged in production and are not sent directly to the AI model.",
       "Use /forget_me to delete your data.",
     ].join("\n\n"),
@@ -171,19 +154,8 @@ bot.command("sync", async (ctx) => {
     return;
   }
 
-  if (user.stravaConnection) {
-    await syncStravaActivities({
-      userId: user.id,
-      config: {
-        clientId: env.STRAVA_CLIENT_ID,
-        clientSecret: env.STRAVA_CLIENT_SECRET,
-        publicBaseUrl: env.PUBLIC_BASE_URL,
-      },
-    });
-  }
-
   await calculateReadiness(user.id);
-  await ctx.reply("Sync completed. Readiness recalculated.");
+  await ctx.reply("Apple Health data is ingested through Health Auto Export. Readiness recalculated.");
 });
 
 bot.on("message:text", async (ctx) => {

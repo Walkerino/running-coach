@@ -5,9 +5,17 @@ import { getTrainingLoad } from "../training/readiness-service.js";
 export async function buildUserSummary(userId: string) {
   const [user, runs, health, healthMetricNames, latestHealthImport, readiness, trainingLoad] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
-    prisma.stravaActivity.findMany({
-      where: { userId, isDeleted: false },
-      orderBy: { startDate: "desc" },
+    prisma.healthWorkout.findMany({
+      where: {
+        userId,
+        OR: [
+          { workoutType: { contains: "run", mode: "insensitive" } },
+          { workoutType: { contains: "running", mode: "insensitive" } },
+          { workoutType: { contains: "jog", mode: "insensitive" } },
+          { workoutType: { contains: "treadmill", mode: "insensitive" } },
+        ],
+      },
+      orderBy: { date: "desc" },
       take: 10,
     }),
     getHealthSummary(userId, 14),
@@ -40,12 +48,11 @@ export async function buildUserSummary(userId: string) {
     readiness,
     trainingLoad,
     recentRuns: runs.map((run: (typeof runs)[number]) => ({
-      date: run.startDate.toISOString(),
-      name: run.name,
+      date: run.date.toISOString(),
+      workoutType: run.workoutType,
       distanceMeters: run.distanceMeters,
-      movingTimeSeconds: run.movingTimeSeconds,
-      averageHeartrate: run.averageHeartrate,
-      sportType: run.sportType,
+      durationSeconds: run.durationSeconds,
+      averageHeartRate: run.averageHeartRate,
     })),
     health,
     latestHealthImport,
