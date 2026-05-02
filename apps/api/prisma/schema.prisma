@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ReadinessStatus {
+  low
+  medium
+  high
+}
+
+enum RecommendationType {
+  rest
+  recovery
+  easy_run
+  quality_session
+  long_easy
+}
+
+enum JobStatus {
+  pending
+  running
+  completed
+  failed
+}
+
+model User {
+  id                     String                @id @default(cuid())
+  telegramId             String                @unique
+  username               String?
+  firstName              String?
+  timezone               String                @default("Europe/Helsinki")
+  age                    Int?
+  sex                    String?
+  heightCm               Int?
+  weightKg               Float?
+  goal                   String?
+  usualEasyHrMin         Int?
+  usualEasyHrMax         Int?
+  runningFrequencyPerWeek Int?
+  preferredRunTime       String?
+  healthExportToken      String                @unique
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  stravaConnection       StravaConnection?
+  stravaActivities       StravaActivity[]
+  healthDaily            HealthDaily[]
+  healthMetricSamples    HealthMetricSample[]
+  healthPayloadImports   HealthPayloadImport[]
+  healthWorkouts         HealthWorkout[]
+  readinessScores        ReadinessScore[]
+  conversationMessages   ConversationMessage[]
+  subjectiveFeedback     SubjectiveFeedback[]
+}
+
+model StravaConnection {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  athleteId            String
+  accessTokenEncrypted String
+  refreshTokenEncrypted String
+  expiresAt            DateTime
+  scope                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model StravaActivity {
+  id                  String   @id @default(cuid())
+  userId              String
+  stravaActivityId    String   @unique
+  name                String?
+  sportType           String?
+  type                String?
+  startDate           DateTime
+  timezone            String?
+  distanceMeters      Float?
+  movingTimeSeconds   Int?
+  elapsedTimeSeconds  Int?
+  averageSpeed        Float?
+  maxSpeed            Float?
+  averageHeartrate    Float?
+  maxHeartrate        Float?
+  totalElevationGain  Float?
+  sufferScore         Float?
+  perceivedExertion   Int?
+  calories            Float?
+  visibility          String?
+  isDeleted           Boolean  @default(false)
+  rawJson             Json
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startDate])
+}
+
+model HealthDaily {
+  id                           String   @id @default(cuid())
+  userId                       String
+  date                         DateTime
+  sleepMinutes                 Int?
+  restingHeartRate             Float?
+  hrvMs                        Float?
+  vo2max                       Float?
+  steps                        Int?
+  activeEnergyKcal             Float?
+  walkingRunningDistanceMeters Float?
+  averageHeartRate             Float?
+  minHeartRate                 Float?
+  maxHeartRate                 Float?
+  source                       String
+  rawJson                      Json
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  user                         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model HealthPayloadImport {
+  id                String   @id @default(cuid())
+  userId            String
+  dailyCount        Int
+  workoutCount      Int
+  metricSampleCount Int
+  topLevelKeys      String[]
+  rawJson           Json
+  createdAt         DateTime @default(now())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model HealthMetricSample {
+  id          String   @id @default(cuid())
+  userId      String
+  metricName  String
+  date        DateTime
+  units       String?
+  qty         Float?
+  min         Float?
+  avg         Float?
+  max         Float?
+  value       String?
+  fingerprint String   @unique
+  rawJson     Json
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, metricName, date])
+  @@index([userId, date])
+}
+
+model HealthWorkout {
+  id               String   @id @default(cuid())
+  userId           String
+  date             DateTime
+  workoutType      String?
+  durationSeconds  Int?
+  distanceMeters   Float?
+  averageHeartRate Float?
+  maxHeartRate     Float?
+  calories         Float?
+  rawJson          Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model ReadinessScore {
+  id                   String             @id @default(cuid())
+  userId               String
+  date                 DateTime
+  score                Int
+  status               ReadinessStatus
+  recommendationType   RecommendationType
+  reasonsJson          Json
+  warningsJson         Json
+  suggestedSessionJson Json
+  createdAt            DateTime           @default(now())
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model ConversationMessage {
+  id           String   @id @default(cuid())
+  userId       String
+  role         String
+  content      String
+  metadataJson Json?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model SubjectiveFeedback {
+  id           String   @id @default(cuid())
+  userId       String
+  date         DateTime
+  sleepQuality Int?
+  soreness     Int?
+  energy       Int?
+  stress       Int?
+  notes        String?
+  symptoms     String?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  type        String
+  payloadJson Json
+  status      JobStatus @default(pending)
+  attempts    Int       @default(0)
+  lastError   String?
+  runAt       DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, runAt])
+}
