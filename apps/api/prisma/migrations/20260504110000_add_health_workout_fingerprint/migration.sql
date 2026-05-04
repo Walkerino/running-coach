@@ -35,10 +35,29 @@ SET "fingerprint" = ranked_workouts.fingerprint
 FROM ranked_workouts
 WHERE hw.id = ranked_workouts.id;
 
-DELETE FROM "HealthWorkout" hw
-USING ranked_workouts
-WHERE hw.id = ranked_workouts.id
-  AND ranked_workouts.row_num > 1;
+WITH ranked_workouts AS (
+  SELECT
+    id,
+    row_number() OVER (
+      PARTITION BY
+        "userId",
+        "date",
+        coalesce("workoutType", ''),
+        coalesce("durationSeconds", -1),
+        coalesce("distanceMeters", -1),
+        coalesce("averageHeartRate", -1),
+        coalesce("maxHeartRate", -1),
+        coalesce("calories", -1)
+      ORDER BY "createdAt" ASC, id ASC
+    ) AS row_num
+  FROM "HealthWorkout"
+)
+DELETE FROM "HealthWorkout"
+WHERE id IN (
+  SELECT id
+  FROM ranked_workouts
+  WHERE row_num > 1
+);
 
 ALTER TABLE "HealthWorkout" ALTER COLUMN "fingerprint" SET NOT NULL;
 
