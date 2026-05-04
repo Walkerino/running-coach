@@ -4,7 +4,12 @@ import { env } from "../config/env.js";
 import { calculateReadiness } from "../training/readiness-service.js";
 import { runAgent } from "../agent/agent-service.js";
 import { saveConversationMessage } from "../services/conversation-service.js";
-import { deleteUserData, ensureUserFromTelegram, getUserByTelegramId } from "../services/user-service.js";
+import {
+  deleteUserData,
+  ensureUserFromTelegram,
+  getUserByTelegramId,
+  updateUserProfile,
+} from "../services/user-service.js";
 import { buildUserSummary } from "../services/summary-service.js";
 
 export const bot = new Bot(env.TELEGRAM_BOT_TOKEN);
@@ -48,6 +53,7 @@ function profileToText(user: Awaited<ReturnType<typeof getUserByTelegramId>>) {
     `Easy HR: ${user.usualEasyHrMin ?? "-"}-${user.usualEasyHrMax ?? "-"} bpm`,
     `Frequency: ${user.runningFrequencyPerWeek ?? "-"} runs/week`,
     `Preferred run time: ${user.preferredRunTime ?? "-"}`,
+    `Morning readiness: ${user.morningReadinessEnabled ? `on at ${user.morningReadinessTime}` : "off"}`,
     `Health token: ${user.healthExportToken}`,
   ].join("\n");
 }
@@ -100,10 +106,52 @@ bot.command("set_goal", async (ctx) => {
     return;
   }
 
-  await import("../services/user-service.js").then(({ updateUserProfile }) =>
-    updateUserProfile(user.id, { goal }),
-  );
+  await updateUserProfile(user.id, { goal });
   await ctx.reply(`Goal updated: ${goal}`);
+});
+
+bot.command("morning_on", async (ctx) => {
+  const from = requireFrom(ctx);
+  const user = await ensureUserFromTelegram({
+    telegramId: String(from.id),
+    username: from.username,
+    firstName: from.first_name,
+  });
+
+  await updateUserProfile(user.id, {
+    morningReadinessEnabled: true,
+    morningReadinessTime: "07:45",
+  });
+  await ctx.reply("Morning readiness is enabled. I will send it daily at 07:45 Europe/Helsinki.");
+});
+
+bot.command("morning_off", async (ctx) => {
+  const from = requireFrom(ctx);
+  const user = await ensureUserFromTelegram({
+    telegramId: String(from.id),
+    username: from.username,
+    firstName: from.first_name,
+  });
+
+  await updateUserProfile(user.id, {
+    morningReadinessEnabled: false,
+  });
+  await ctx.reply("Morning readiness is disabled.");
+});
+
+bot.command("morning_status", async (ctx) => {
+  const from = requireFrom(ctx);
+  const user = await getUserByTelegramId(String(from.id));
+  if (!user) {
+    await ctx.reply("Profile not found.");
+    return;
+  }
+
+  await ctx.reply(
+    user.morningReadinessEnabled
+      ? `Morning readiness is on at ${user.morningReadinessTime} (${user.timezone}).`
+      : "Morning readiness is off.",
+  );
 });
 
 bot.command("privacy", async (ctx) => {

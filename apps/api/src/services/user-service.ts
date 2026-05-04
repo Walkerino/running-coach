@@ -14,6 +14,8 @@ const DEFAULT_PROFILE = {
   runningFrequencyPerWeek: 5,
   preferredRunTime: "morning",
   timezone: "Europe/Helsinki",
+  morningReadinessEnabled: false,
+  morningReadinessTime: "07:45",
 };
 
 export async function ensureUserFromTelegram(input: {
