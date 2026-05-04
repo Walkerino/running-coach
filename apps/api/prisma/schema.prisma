@@ -168,6 +168,7 @@ model HealthWorkout {
   averageHeartRate Float?
   maxHeartRate     Float?
   calories         Float?
+  fingerprint      String   @unique
   rawJson          Json
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

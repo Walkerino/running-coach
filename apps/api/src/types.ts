@@ -29,6 +29,7 @@ export type HealthSummary = {
   }>;
   workouts: Array<{
     date: string;
+    startedAt: string;
     workoutType: string | null;
     durationSeconds: number | null;
     distanceMeters: number | null;

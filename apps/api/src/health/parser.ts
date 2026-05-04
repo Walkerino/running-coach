@@ -1,4 +1,4 @@
-import { toAppDate } from "../utils/time.js";
+import { formatAppDate, toAppDate, toAppDateTime } from "../utils/time.js";
 
 export type ParsedHealthPayload = {
   metricSamples: Array<{
@@ -101,7 +101,7 @@ function workoutDescriptors(payload: unknown) {
 }
 
 function dateKey(date: Date) {
-  return date.toISOString().slice(0, 10);
+  return formatAppDate(date);
 }
 
 function hoursToMinutes(value: number | null) {
@@ -294,7 +294,7 @@ function parseWorkouts(payload: unknown) {
   return workoutDescriptors(payload)
     .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
     .map((item) => ({
-      date: toAppDate((item.date ?? item.start ?? item.startDate ?? item.start_date) as string | Date),
+      date: toAppDateTime((item.date ?? item.start ?? item.startDate ?? item.start_date) as string | Date),
       workoutType: asString(item.workoutType) ?? asString(item.name) ?? asString(item.activityType),
       durationSeconds: readMetric(item, ["durationSeconds", "duration", "duration_seconds"]),
       distanceMeters: metersFrom(readQuantityObject(item.distance) ?? readMetric(item, ["distanceMeters", "distance"]), asString((item.distance as Record<string, unknown> | undefined)?.units)),

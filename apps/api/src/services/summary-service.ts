@@ -1,6 +1,7 @@
 import { prisma } from "../db/prisma.js";
 import { getHealthSummary } from "../health/health-service.js";
 import { getTrainingLoad } from "../training/readiness-service.js";
+import { formatAppDateTime } from "../utils/time.js";
 
 export async function buildUserSummary(userId: string) {
   const [user, runs, health, healthMetricNames, latestHealthImport, readiness, trainingLoad] = await Promise.all([
@@ -48,7 +49,7 @@ export async function buildUserSummary(userId: string) {
     readiness,
     trainingLoad,
     recentRuns: runs.map((run: (typeof runs)[number]) => ({
-      date: run.date.toISOString(),
+      date: formatAppDateTime(run.date),
       workoutType: run.workoutType,
       distanceMeters: run.distanceMeters,
       durationSeconds: run.durationSeconds,

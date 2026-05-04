@@ -3,6 +3,7 @@ import { getHealthSummary } from "../health/health-service.js";
 import { chatWithOpenRouter, type LlmMessage } from "../llm/openrouter-client.js";
 import { getRecentConversation } from "../services/conversation-service.js";
 import { calculateReadiness, getTrainingLoad } from "../training/readiness-service.js";
+import { formatAppDateTime } from "../utils/time.js";
 
 const systemPrompt = `You are a personal AI running assistant inside Telegram.
 
@@ -100,7 +101,7 @@ async function getRecentRuns(userId: string) {
   });
 
   return runs.map((run) => ({
-    date: run.date.toISOString(),
+    date: formatAppDateTime(run.date),
     workoutType: run.workoutType,
     distanceMeters: run.distanceMeters,
     durationSeconds: run.durationSeconds,

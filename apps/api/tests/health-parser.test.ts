@@ -90,6 +90,7 @@ describe("parseHealthPayload", () => {
     expect(parsed.daily[0]?.maxHeartRate).toBe(142);
     expect(parsed.daily[0]?.steps).toBe(9000);
     expect(parsed.workouts[0]?.workoutType).toBe("Running");
+    expect(parsed.workouts[0]?.date.toISOString()).toBe("2026-04-29T04:00:00.000Z");
     expect(parsed.workouts[0]?.durationSeconds).toBe(1800);
     expect(parsed.workouts[0]?.distanceMeters).toBe(5000);
     expect(parsed.workouts[0]?.calories).toBe(320);

@@ -2,12 +2,56 @@ import { createHash } from "node:crypto";
 
 import { prisma } from "../db/prisma.js";
 import { parseHealthPayload } from "./parser.js";
+import { formatAppDate, formatAppDateTime } from "../utils/time.js";
 
 function metricFingerprint(userId: string, metricName: string, rawJson: unknown) {
   return createHash("sha256")
     .update(userId)
     .update(metricName)
     .update(JSON.stringify(rawJson))
+    .digest("hex");
+}
+
+function workoutFingerprint(
+  userId: string,
+  workout: {
+    date: Date;
+    workoutType?: string | null;
+    durationSeconds?: number | null;
+    distanceMeters?: number | null;
+    averageHeartRate?: number | null;
+    maxHeartRate?: number | null;
+    calories?: number | null;
+    rawJson: unknown;
+  },
+) {
+  const raw = typeof workout.rawJson === "object" && workout.rawJson !== null
+    ? (workout.rawJson as Record<string, unknown>)
+    : {};
+  const stableSourceId =
+    typeof raw.id === "string" && raw.id.trim() !== ""
+      ? raw.id
+      : typeof raw.uuid === "string" && raw.uuid.trim() !== ""
+        ? raw.uuid
+        : typeof raw.workoutId === "string" && raw.workoutId.trim() !== ""
+          ? raw.workoutId
+          : null;
+
+  const canonical = stableSourceId
+    ? { stableSourceId }
+    : {
+        date: workout.date.toISOString(),
+        workoutType: workout.workoutType ?? null,
+        durationSeconds: workout.durationSeconds ?? null,
+        distanceMeters: workout.distanceMeters ?? null,
+        averageHeartRate: workout.averageHeartRate ?? null,
+        maxHeartRate: workout.maxHeartRate ?? null,
+        calories: workout.calories ?? null,
+      };
+
+  return createHash("sha256")
+    .update(userId)
+    .update(JSON.stringify(canonical))
     .digest("hex");
 }
 
@@ -88,9 +132,22 @@ export async function ingestHealthPayload(input: {
   }
 
   for (const workout of parsed.workouts) {
-    await prisma.healthWorkout.create({
-      data: {
+    const fingerprint = workoutFingerprint(input.userId, workout);
+    await prisma.healthWorkout.upsert({
+      where: { fingerprint },
+      update: {
+        date: workout.date,
+        workoutType: workout.workoutType,
+        durationSeconds: workout.durationSeconds,
+        distanceMeters: workout.distanceMeters,
+        averageHeartRate: workout.averageHeartRate,
+        maxHeartRate: workout.maxHeartRate,
+        calories: workout.calories,
+        rawJson: workout.rawJson as never,
+      },
+      create: {
         userId: input.userId,
+        fingerprint,
         ...workout,
         rawJson: workout.rawJson as never,
       },
@@ -115,7 +172,7 @@ export async function getHealthSummary(userId: string, days: number) {
 
   return {
     daily: daily.map((item: (typeof daily)[number]) => ({
-      date: item.date.toISOString().slice(0, 10),
+      date: formatAppDate(item.date),
       sleepMinutes: item.sleepMinutes,
       restingHeartRate: item.restingHeartRate,
       hrvMs: item.hrvMs,
@@ -123,7 +180,8 @@ export async function getHealthSummary(userId: string, days: number) {
       steps: item.steps,
     })),
     workouts: workouts.map((item: (typeof workouts)[number]) => ({
-      date: item.date.toISOString().slice(0, 10),
+      date: formatAppDate(item.date),
+      startedAt: formatAppDateTime(item.date),
       workoutType: item.workoutType,
       durationSeconds: item.durationSeconds,
       distanceMeters: item.distanceMeters,
