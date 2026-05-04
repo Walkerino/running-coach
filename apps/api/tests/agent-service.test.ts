@@ -97,6 +97,56 @@ describe("runAgent", () => {
     expect(prismaMock.healthWorkout.findMany).not.toHaveBeenCalled();
   });
 
+  it("allows broader guidance while keeping health facts deterministic", async () => {
+    prismaMock.user.findUnique
+      .mockResolvedValueOnce({ id: "user-1", telegramId: "42" })
+      .mockResolvedValueOnce({
+        timezone: "Europe/Helsinki",
+        age: 35,
+        sex: null,
+        heightCm: null,
+        weightKg: null,
+        goal: "Improve VO2max",
+        usualEasyHrMin: 130,
+        usualEasyHrMax: 140,
+        runningFrequencyPerWeek: 3,
+        preferredRunTime: null,
+      });
+    calculateReadiness.mockResolvedValue({
+      score: 72,
+      status: "medium",
+      recommendationType: "easy_run",
+      reasons: ["Recent hard session."],
+      warnings: [],
+      suggestedSession: { title: "Easy aerobic run", durationMinutes: 30, structure: ["Run easy"] },
+    });
+    getTrainingLoad.mockResolvedValue({
+      weeklyDistanceKm: 18,
+      average4WeekDistanceKm: 16,
+      recentHardSessions: 1,
+      recentRuns: 4,
+    });
+    getHealthSummary.mockResolvedValue({
+      daily: [{ date: "2026-04-29", sleepMinutes: 430, restingHeartRate: 52, hrvMs: 65, vo2max: 48, steps: 9000 }],
+      workouts: [],
+    });
+    prismaMock.healthWorkout.findMany.mockResolvedValue([]);
+
+    const { runAgent } = await import("../src/agent/agent-service.js");
+    await runAgent({
+      telegramUserId: "42",
+      message: "Я устал и не уверен в мотивации, но хочу понять, стоит ли сегодня бежать.",
+    });
+
+    const messages = chatWithOpenRouter.mock.calls[0][0];
+    expect(messages[0].content).toContain("supplemental personalization context");
+    expect(messages[0].content).toContain("You may still answer with general coaching");
+    const contextMessage = messages.find((message: { content: string }) =>
+      message.content.includes("Deterministic training context"),
+    );
+    expect(contextMessage.content).toContain("You may still answer broader non-data questions normally");
+  });
+
   it("adds deterministic context for health data questions", async () => {
     prismaMock.user.findUnique
       .mockResolvedValueOnce({ id: "user-1", telegramId: "42" })

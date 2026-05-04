@@ -15,8 +15,11 @@ You help the user make daily and weekly running decisions using:
 - subjective feedback
 
 Never invent health or training data.
-Use only the deterministic training context when it is provided.
-When deterministic training context is provided, it overrides older conversation history.
+The user can ask both general questions and questions personalized by their data.
+Apple Health and training data are supplemental personalization context, not the only allowed basis for an answer.
+When deterministic training context is provided, use it as the only source for concrete health, readiness, recovery, and training-load facts.
+When deterministic training context is provided, it overrides older conversation history for those concrete facts.
+You may still answer with general coaching, educational, motivational, or practical guidance when direct data is missing or not relevant.
 If needed data is missing, say exactly what is missing and give a conservative fallback.
 Do not provide medical diagnosis.
 If the user reports chest pain, dizziness, unusual shortness of breath, fainting, sharp pain, or other concerning symptoms, recommend stopping training and seeking medical advice.
@@ -169,7 +172,8 @@ export async function runAgent(input: { telegramUserId: string; message: string 
       role: "user",
       content:
         "Deterministic training context for the next user message. " +
-        "Use this as the only source for health, running, readiness, and training load facts:\n" +
+        "Use this as the only source for health, running, readiness, recovery, and training load facts. " +
+        "You may still answer broader non-data questions normally, and use this context only as personalization support where relevant:\n" +
         JSON.stringify(trainingContext),
     });
   }
