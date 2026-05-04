@@ -146,6 +146,31 @@ docker compose logs -f caddy
 docker compose logs -f postgres
 ```
 
+## GitHub Auto Deploy
+
+The repository includes [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) to deploy on every push to `main`.
+
+Set these GitHub Actions secrets in the repository:
+
+- `DEPLOY_HOST`: server IP or hostname
+- `DEPLOY_USER`: SSH user
+- `DEPLOY_PASSWORD`: SSH password for the deploy user
+- `DEPLOY_PATH`: absolute path of the project on the server, for example `/opt/running-coach`
+
+Server requirements:
+
+- Docker and Docker Compose plugin installed
+- A valid `.env` file already present at `DEPLOY_PATH`
+- Ports `80` and `443` open for Caddy
+
+The workflow uploads the repository contents except `.env`, then runs:
+
+```bash
+docker compose up -d --build
+```
+
+Using a dedicated deploy user or SSH key is preferable to password-based root login.
+
 ## Prisma Migrations
 
 ```bash
