@@ -50,11 +50,81 @@ textarea {
   box-shadow: 0 16px 32px rgba(9, 14, 29, 0.05);
 }
 
+.surface-panel {
+  animation: surface-enter 360ms ease-out both;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.surface-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 40px rgba(9, 14, 29, 0.07);
+}
+
+.surface-interactive {
+  transition:
+    transform 180ms ease,
+    color 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.surface-interactive:hover {
+  transform: translateY(-1px);
+}
+
+.surface-interactive:active {
+  transform: translateY(0);
+}
+
+.page-enter {
+  animation: page-enter 300ms ease-out both;
+}
+
+.metric-bar {
+  animation: metric-bar-reveal 520ms ease-out both;
+  transform-origin: left center;
+}
+
 .ask-shell-shadow {
   box-shadow:
     0 0 0 8px rgba(255, 255, 255, 0.25),
     0 204px 204px rgba(61, 73, 102, 0.13),
     0 51px 112px rgba(61, 73, 102, 0.15);
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes surface-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes metric-bar-reveal {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
 }
 
 @keyframes complete-pop {
@@ -98,4 +168,21 @@ textarea {
     -14px 18px 0 #ffb020,
     8px -18px 0 #43c9cc;
   animation: complete-spark 820ms ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+
+  .surface-panel:hover,
+  .surface-interactive:hover,
+  .surface-interactive:active {
+    transform: none;
+  }
 }

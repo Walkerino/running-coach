@@ -12,7 +12,7 @@ export function RecoveryCard({ score, estimated, factors }: { score: number; est
         <StatusBadge label={estimated ? "Estimated" : "Complete"} tone={score >= 65 ? "green" : "amber"} />
       </div>
       <div className="mt-5 h-3 rounded-full bg-[#edf5ff]">
-        <div className="h-3 rounded-full bg-[#0f67fe]" style={{ width: `${score}%` }} />
+        <div className="metric-bar h-3 rounded-full bg-[#0f67fe]" style={{ width: `${score}%` }} />
       </div>
       <p className="mt-4 text-sm font-medium leading-6 text-[#3d4966]">{factors[0]} This is not a medical diagnosis.</p>
     </MetricCard>

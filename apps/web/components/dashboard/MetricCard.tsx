@@ -10,7 +10,7 @@ type MetricCardProps = {
 
 export function MetricCard({ title, eyebrow, children, className }: MetricCardProps) {
   return (
-    <section className={cn("ask-card p-4 lg:p-5", className)}>
+    <section className={cn("ask-card surface-panel p-4 lg:p-5", className)}>
       {eyebrow ? <p className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#818ba0]">{eyebrow}</p> : null}
       <h2 className="mt-1 text-lg font-extrabold tracking-[-0.02em] text-[#090e1d]">{title}</h2>
       <div className="mt-4">{children}</div>

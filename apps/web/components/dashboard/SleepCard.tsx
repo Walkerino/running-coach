@@ -37,7 +37,7 @@ export function SleepCard({ sleep }: { sleep?: SleepRecord }) {
       </div>
       <div className="mt-5 flex h-14 items-end gap-2">
         {[28, 42, 36, 52, 46, 24, 32, 40].map((height, index) => (
-          <div key={index} className="flex-1 rounded-t-md bg-[#43c9cc]" style={{ height: `${height}px`, opacity: index === 3 ? 1 : 0.55 }} />
+          <div key={index} className="metric-bar flex-1 rounded-t-md bg-[#43c9cc]" style={{ height: `${height}px`, opacity: index === 3 ? 1 : 0.55 }} />
         ))}
       </div>
       <p className="mt-5 text-sm font-medium leading-6 text-[#3d4966]">

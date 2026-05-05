@@ -17,7 +17,7 @@ export function SidebarNav() {
 
   return (
     <aside className="hidden w-28 shrink-0 bg-white lg:flex lg:flex-col lg:items-center lg:justify-between lg:py-6">
-      <Link href="/dashboard" className="flex size-16 items-center justify-center rounded-xl bg-[#0f67fe] text-white shadow-[0_12px_24px_rgba(15,103,254,0.28)]" aria-label="Running Coach">
+      <Link href="/dashboard" className="surface-interactive flex size-16 items-center justify-center rounded-xl bg-[#0f67fe] text-white shadow-[0_12px_24px_rgba(15,103,254,0.28)]" aria-label="Running Coach">
         <Icon name="plus" className="size-8" />
       </Link>
 
@@ -30,7 +30,7 @@ export function SidebarNav() {
               href={item.href}
               title={item.label}
               className={cn(
-                "relative flex size-16 items-center justify-center rounded-xl transition",
+                "surface-interactive relative flex size-16 shrink-0 items-center justify-center rounded-xl",
                 active ? "bg-[#edf5ff] text-[#0f67fe]" : "text-[#bec5d2] hover:bg-[#f2f5f9] hover:text-[#0f67fe]",
               )}
             >
@@ -42,10 +42,10 @@ export function SidebarNav() {
       </nav>
 
       <div className="flex flex-col items-center gap-4">
-        <Link href="/insights" title="Weekly Insights" className="flex size-16 items-center justify-center rounded-xl text-[#bec5d2] transition hover:bg-[#f2f5f9] hover:text-[#0f67fe]">
+        <Link href="/insights" title="Weekly Insights" className="surface-interactive flex size-16 shrink-0 items-center justify-center rounded-xl text-[#bec5d2] hover:bg-[#f2f5f9] hover:text-[#0f67fe]">
           <Icon name="trend" className="size-7" />
         </Link>
-        <Link href="/settings" title="Settings / Data" className="flex size-16 items-center justify-center rounded-xl text-[#bec5d2] transition hover:bg-[#f2f5f9] hover:text-[#0f67fe]">
+        <Link href="/settings" title="Settings / Data" className="surface-interactive flex size-16 shrink-0 items-center justify-center rounded-xl text-[#bec5d2] hover:bg-[#f2f5f9] hover:text-[#0f67fe]">
           <Icon name="settings" className="size-7" />
         </Link>
         <div className="relative flex size-16 items-center justify-center overflow-hidden rounded-xl border border-[#bec5d2] bg-[#9ea7b8] text-sm font-extrabold text-white">

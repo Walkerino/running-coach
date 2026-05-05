@@ -12,6 +12,7 @@ import { generateWeeklyPlan } from "@/lib/health/plan";
 import { generateTodayRecommendation } from "@/lib/health/recommendation";
 import { calculatePreviousDayLoad, calculateRecoveryScore } from "@/lib/health/recovery";
 import { Icon } from "@/components/ui/Icon";
+import type { Workout } from "@/lib/health/types";
 
 export const dynamic = "force-dynamic";
 
@@ -55,12 +56,7 @@ export default async function DashboardPage() {
     injuryNotes: data.settings.injuryNotes,
     settings: data.settings,
   });
-  const recentWorkouts = [...data.workouts]
-    .filter((workout) => {
-      const age = getDaysBetween(workout.date, daily.today);
-      return age >= 0 && age < 7;
-    })
-    .sort((a, b) => b.date.localeCompare(a.date));
+  const recentWorkouts = getUniqueRecentWorkouts(data.workouts, daily.today);
 
   return (
     <div className="grid gap-5 xl:grid-cols-[365px_1fr]">
@@ -79,10 +75,10 @@ export default async function DashboardPage() {
               <Icon name="search" className="size-5 text-[#090e1d]" />
               Search anything...
             </div>
-            <Link href="/insights" className="flex h-14 items-center rounded-xl border border-[#bec5d2] px-4 text-sm font-extrabold text-[#3d4966] hover:bg-white">
+            <Link href="/insights" className="surface-interactive flex h-14 items-center rounded-xl border border-[#bec5d2] px-4 text-sm font-extrabold text-[#3d4966] hover:bg-white">
               Weekly Insights
             </Link>
-            <Link href="/settings" className="flex size-14 items-center justify-center rounded-xl border border-[#bec5d2] text-[#3d4966] hover:bg-white" aria-label="Settings">
+            <Link href="/settings" className="surface-interactive flex size-14 items-center justify-center rounded-xl border border-[#bec5d2] text-[#3d4966] hover:bg-white" aria-label="Settings">
               <Icon name="settings" />
             </Link>
           </div>
@@ -100,6 +96,31 @@ export default async function DashboardPage() {
   );
 }
 
+function workoutDedupeSignature(workout: Workout) {
+  const duration = Math.round(workout.durationMinutes / 5) * 5;
+  const distance = workout.distanceKm != null ? Math.round(workout.distanceKm * 10) / 10 : 0;
+  return [workout.date, workout.type, duration, distance].join(":");
+}
+
+function getUniqueRecentWorkouts(workouts: Workout[], today: string) {
+  const unique = new Map<string, Workout>();
+
+  for (const workout of workouts) {
+    const age = getDaysBetween(workout.date, today);
+    if (age < 0 || age >= 7) continue;
+
+    const signature = workoutDedupeSignature(workout);
+    const current = unique.get(signature);
+    if (!current || workout.load > current.load) {
+      unique.set(signature, workout);
+    }
+  }
+
+  return Array.from(unique.values())
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 7);
+}
+
 function NoHealthDataDashboard({ source }: { source: string }) {
   return (
     <section className="ask-card p-8">
@@ -110,7 +131,7 @@ function NoHealthDataDashboard({ source }: { source: string }) {
       <p className="mt-4 max-w-2xl text-sm font-medium leading-6 text-[#3d4966]">
         Source is {source}, but the database has no imported workouts or daily recovery rows yet. Import Apple Health export data first; the dashboard will not show mock recovery, sleep, or load values in production.
       </p>
-      <Link href="/settings" className="mt-6 inline-flex rounded-xl bg-[#0f67fe] px-5 py-3 text-sm font-extrabold text-white">
+      <Link href="/settings" className="surface-interactive mt-6 inline-flex rounded-xl bg-[#0f67fe] px-5 py-3 text-sm font-extrabold text-white">
         Open data settings
       </Link>
     </section>
