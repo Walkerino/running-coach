@@ -47,6 +47,38 @@ describe("health service", () => {
     );
   });
 
+  it("keeps the same fallback workout fingerprint when only HR enrichment changes", async () => {
+    const { ingestHealthPayload } = await import("../src/health/health-service.js");
+
+    await ingestHealthPayload({
+      userId: "user-1",
+      payload: {
+        data: {
+          workouts: [
+            {
+              name: "Running",
+              start: "2026-05-04 07:00:00 +0300",
+              duration: 1800,
+              distance: { qty: 5, units: "km" },
+              averageHeartRate: 142,
+            },
+            {
+              name: "Running",
+              start: "2026-05-04 07:00:00 +0300",
+              duration: 1800,
+              distance: { qty: 5, units: "km" },
+              averageHeartRate: 145,
+              maxHeartRate: 168,
+            },
+          ],
+        },
+      },
+    });
+
+    const fingerprints = prismaMock.healthWorkout.upsert.mock.calls.map((call) => call[0].where.fingerprint);
+    expect(fingerprints[0]).toBe(fingerprints[1]);
+  });
+
   it("formats health summary dates in app timezone without UTC shift", async () => {
     prismaMock.healthDaily.findMany.mockResolvedValue([
       {

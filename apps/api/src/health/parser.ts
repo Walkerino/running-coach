@@ -66,6 +66,29 @@ function readMetric(obj: Record<string, unknown>, keys: string[]): number | null
   return null;
 }
 
+function durationStringToMinutes(value: string): number | null {
+  const match = value.trim().match(/^(\d{1,2}):([0-5]\d)$/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function readDurationMetric(obj: Record<string, unknown>, keys: string[]): { key: string; value: number; alreadyMinutes?: boolean } | null {
+  for (const key of keys) {
+    if (!(key in obj)) continue;
+
+    const raw = obj[key];
+    if (typeof raw === "string") {
+      const durationMinutes = durationStringToMinutes(raw);
+      if (durationMinutes != null) return { key, value: durationMinutes, alreadyMinutes: true };
+    }
+
+    const value = asNumber(raw);
+    if (value !== null) return { key, value };
+  }
+
+  return null;
+}
+
 function readQuantityObject(value: unknown): number | null {
   if (typeof value === "object" && value !== null) {
     return asNumber((value as Record<string, unknown>).qty);
@@ -108,6 +131,30 @@ function hoursToMinutes(value: number | null) {
   return value == null ? null : Math.round(value * 60);
 }
 
+function sleepValueToMinutes(value: number, units: string | null | undefined, key: string) {
+  const normalizedUnits = units?.toLowerCase();
+  const normalizedKey = key.toLowerCase();
+
+  if (normalizedKey.includes("minute")) return Math.round(value);
+  if (normalizedUnits === "min" || normalizedUnits === "mins" || normalizedUnits === "minute" || normalizedUnits === "minutes") {
+    return Math.round(value);
+  }
+  if (normalizedUnits === "s" || normalizedUnits === "sec" || normalizedUnits === "second" || normalizedUnits === "seconds") {
+    return Math.round(value / 60);
+  }
+  if (normalizedUnits === "hr" || normalizedUnits === "hrs" || normalizedUnits === "hour" || normalizedUnits === "hours") {
+    return hoursToMinutes(value);
+  }
+
+  return value <= 24 ? hoursToMinutes(value) : Math.round(value);
+}
+
+function readSleepMinutes(obj: Record<string, unknown>, units?: string | null) {
+  const value = readDurationMetric(obj, ["sleepMinutes", "sleep_minutes", "sleepInMinutes", "totalSleep", "asleep", "sleep", "duration"]);
+  if (!value) return null;
+  return value.alreadyMinutes ? value.value : sleepValueToMinutes(value.value, units, value.key);
+}
+
 function metersFrom(value: number | null, units: string | null | undefined) {
   if (value == null) {
     return null;
@@ -124,13 +171,15 @@ function metersFrom(value: number | null, units: string | null | undefined) {
   return value;
 }
 
-function dailyValueForMetric(metricName: string, point: Record<string, unknown>) {
+function dailyValueForMetric(metricName: string, point: Record<string, unknown>, units: string | null | undefined) {
   switch (metricName) {
     case "sleep_analysis":
-      return hoursToMinutes(
-        readMetric(point, ["totalSleep", "asleep", "sleepMinutes", "sleep_minutes"]) ??
-          asNumber(point.qty),
-      );
+      {
+        const sleep = readSleepMinutes(point, units);
+        if (sleep != null) return sleep;
+        const qty = asNumber(point.qty);
+        return qty == null ? null : sleepValueToMinutes(qty, units, "qty");
+      }
     case "resting_heart_rate":
       return readMetric(point, ["qty", "Avg", "avg", "average", "restingHeartRate"]);
     case "heart_rate_variability":
@@ -253,7 +302,7 @@ function parseMetricSamples(payload: unknown) {
         rawJson: rawPoint,
       };
       samples.push(sample);
-      mergeDailyMetric(dailyByDate, date, metricName, dailyValueForMetric(metricName, rawPoint), units, rawPoint);
+      mergeDailyMetric(dailyByDate, date, metricName, dailyValueForMetric(metricName, rawPoint, units), units, rawPoint);
     }
   }
 
@@ -268,7 +317,7 @@ function parseLegacyDaily(payload: unknown) {
     .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
     .map((item) => ({
       date: resolveDate(item),
-      sleepMinutes: readMetric(item, ["sleepMinutes", "sleep", "sleep_minutes", "sleepInMinutes"]),
+      sleepMinutes: readSleepMinutes(item),
       restingHeartRate: readMetric(item, ["restingHeartRate", "resting_hr", "restingHeartRateAvg"]),
       hrvMs: readMetric(item, ["hrvMs", "hrv", "heartRateVariability"]),
       vo2max: readMetric(item, ["vo2max", "vo2Max"]),

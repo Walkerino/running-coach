@@ -44,9 +44,6 @@ function workoutFingerprint(
         workoutType: workout.workoutType ?? null,
         durationSeconds: workout.durationSeconds ?? null,
         distanceMeters: workout.distanceMeters ?? null,
-        averageHeartRate: workout.averageHeartRate ?? null,
-        maxHeartRate: workout.maxHeartRate ?? null,
-        calories: workout.calories ?? null,
       };
 
   return createHash("sha256")

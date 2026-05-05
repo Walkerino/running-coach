@@ -95,4 +95,26 @@ describe("parseHealthPayload", () => {
     expect(parsed.workouts[0]?.distanceMeters).toBe(5000);
     expect(parsed.workouts[0]?.calories).toBe(320);
   });
+
+  it("reads sleep duration from minute units and H:MM strings without converting twice", () => {
+    const parsed = parseHealthPayload({
+      data: {
+        metrics: [
+          {
+            name: "sleep_analysis",
+            units: "min",
+            data: [{ date: "2026-05-05", sleepMinutes: 477 }],
+          },
+          {
+            name: "sleep_analysis",
+            units: "hr",
+            data: [{ date: "2026-05-06", totalSleep: "7:57" }],
+          },
+        ],
+      },
+    });
+
+    expect(parsed.daily[0]?.sleepMinutes).toBe(477);
+    expect(parsed.daily[1]?.sleepMinutes).toBe(477);
+  });
 });
