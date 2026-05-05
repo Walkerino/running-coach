@@ -1,8 +1,6 @@
 import { apiFetch, shouldUseLocalMockDataFallback, shouldUseMockHealthData } from "./api-data";
 import type { TrainingPlanDay, TrainingPlanOverride } from "./types";
 
-type OverrideStore = Map<string, TrainingPlanOverride>;
-
 type PlanChangeResult = {
   override: TrainingPlanOverride;
   summary: string;
@@ -18,14 +16,35 @@ const dayAliases: Array<[number, string[]]> = [
   [6, ["sunday", "sun", "воскресенье", "воскресенья", "вс"]],
 ];
 
-function localStore(): OverrideStore {
-  const globalStore = globalThis as typeof globalThis & { __runningCoachPlanOverrides?: OverrideStore };
-  globalStore.__runningCoachPlanOverrides ??= new Map();
-  return globalStore.__runningCoachPlanOverrides;
-}
-
 function isRunDay(day: TrainingPlanDay) {
   return day.workoutType === "easy_run" || day.workoutType === "recovery_run" || day.workoutType === "long_easy_run" || day.workoutType === "intervals";
+}
+
+async function localOverrideFilePath() {
+  const path = await import("node:path");
+  return path.join(process.cwd(), ".next", "cache", "running-coach-plan-overrides.json");
+}
+
+async function readLocalOverrides(): Promise<Record<string, TrainingPlanOverride>> {
+  const fs = await import("node:fs/promises");
+  const filePath = await localOverrideFilePath();
+
+  try {
+    return JSON.parse(await fs.readFile(filePath, "utf8")) as Record<string, TrainingPlanOverride>;
+  } catch (cause) {
+    if (typeof cause === "object" && cause !== null && "code" in cause && cause.code === "ENOENT") {
+      return {};
+    }
+    throw cause;
+  }
+}
+
+async function writeLocalOverrides(overrides: Record<string, TrainingPlanOverride>) {
+  const fs = await import("node:fs/promises");
+  const path = await import("node:path");
+  const filePath = await localOverrideFilePath();
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, JSON.stringify(overrides, null, 2));
 }
 
 function clonePlan(plan: TrainingPlanDay[]) {
@@ -141,7 +160,25 @@ export function buildPlanChangeOverride(input: {
 }): PlanChangeResult | null {
   const message = input.message.toLowerCase();
   const wantsPlanChange = hasAny(message, ["план", "недел", "week", "plan", "workout", "трен", "бег", "run", "running"]) &&
-    hasAny(message, ["помен", "измени", "измени", "перенеси", "убери", "замени", "adjust", "change", "move", "remove", "prefer", "предпоч"]);
+    hasAny(message, [
+      "обнов",
+      "помен",
+      "измени",
+      "перенеси",
+      "постав",
+      "сделай",
+      "назнач",
+      "убери",
+      "замени",
+      "adjust",
+      "change",
+      "move",
+      "set",
+      "make",
+      "remove",
+      "prefer",
+      "предпоч",
+    ]);
 
   if (!wantsPlanChange) return null;
 
@@ -194,7 +231,8 @@ export function buildPlanChangeOverride(input: {
 
 export async function getTrainingPlanOverride(weekStart: string): Promise<TrainingPlanOverride | null> {
   if (shouldUseMockHealthData()) {
-    return localStore().get(weekStart) ?? null;
+    const overrides = await readLocalOverrides();
+    return overrides[weekStart] ?? null;
   }
 
   const response = await apiFetch(`/web/training-plan-override?weekStart=${encodeURIComponent(weekStart)}`);
@@ -205,7 +243,9 @@ export async function getTrainingPlanOverride(weekStart: string): Promise<Traini
 
 export async function saveTrainingPlanOverride(override: TrainingPlanOverride) {
   if (shouldUseMockHealthData() || shouldUseLocalMockDataFallback()) {
-    localStore().set(override.weekStart, override);
+    const overrides = await readLocalOverrides();
+    overrides[override.weekStart] = override;
+    await writeLocalOverrides(overrides);
     return override;
   }
 
