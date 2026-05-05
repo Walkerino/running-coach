@@ -1,3 +1,7 @@
+http://2.26.87.66 {
+  redir https://{$PUBLIC_BASE_URL_HOSTNAME}{uri} permanent
+}
+
 {$PUBLIC_BASE_URL_HOSTNAME} {
   encode gzip zstd
 
