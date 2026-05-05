@@ -53,18 +53,19 @@ export default async function DashboardPage() {
     loadStatus: loadStatus.status,
     recentHardWorkoutDaysAgo: recentHardWorkout ? getDaysBetween(recentHardWorkout.date, daily.today) : undefined,
     injuryNotes: data.settings.injuryNotes,
+    settings: data.settings,
   });
-  const recentWorkouts = [...data.workouts].sort((a, b) => b.date.localeCompare(a.date));
+  const recentWorkouts = [...data.workouts]
+    .filter((workout) => {
+      const age = getDaysBetween(workout.date, daily.today);
+      return age >= 0 && age < 7;
+    })
+    .sort((a, b) => b.date.localeCompare(a.date));
 
   return (
     <div className="grid gap-5 xl:grid-cols-[365px_1fr]">
       <div className="space-y-5">
         <TodayRecommendationCard recommendation={recommendation} />
-        <section className="ask-card p-5">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#818ba0]">Daily update</p>
-          <p className="mt-3 text-sm font-medium leading-6 text-[#3d4966]">{daily.note} Status date: {daily.today}. Source: {data.source}.</p>
-          <p className="mt-3 text-sm font-medium leading-6 text-[#3d4966]">Coaching estimates only. Stop training for chest pain, dizziness, fainting, or unusual shortness of breath and seek medical advice.</p>
-        </section>
       </div>
 
       <div className="space-y-5">

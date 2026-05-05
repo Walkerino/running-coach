@@ -16,7 +16,7 @@ export default async function CoachPage() {
         <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-[#3d4966]">MVP uses local deterministic responses. OpenRouter can later explain decisions, but training changes should still come from the training engine.</p>
       </div>
       <div className="grid gap-5 lg:grid-cols-[1fr_20rem]">
-        <CoachChat />
+        <CoachChat settings={data.settings} />
         <div className="space-y-5">
           <CoachContextPanel settings={data.settings} />
           <DecisionLog />
