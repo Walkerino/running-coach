@@ -97,6 +97,25 @@ describe("runAgent", () => {
     expect(prismaMock.healthWorkout.findMany).not.toHaveBeenCalled();
   });
 
+  it("passes recent conversation history before the new user message", async () => {
+    prismaMock.user.findUnique.mockResolvedValueOnce({ id: "user-1", telegramId: "42" });
+    getRecentConversation.mockResolvedValue([
+      { role: "user", content: "Меня зовут Иван" },
+      { role: "assistant", content: "Запомнил." },
+    ]);
+
+    const { runAgent } = await import("../src/agent/agent-service.js");
+    await runAgent({ telegramUserId: "42", message: "Как меня зовут?" });
+
+    const messages = chatWithOpenRouter.mock.calls[0][0];
+    expect(messages.map((message: { content: string }) => message.content)).toEqual([
+      expect.stringContaining("You are a personal AI running assistant"),
+      "Меня зовут Иван",
+      "Запомнил.",
+      "Как меня зовут?",
+    ]);
+  });
+
   it("allows broader guidance while keeping health facts deterministic", async () => {
     prismaMock.user.findUnique
       .mockResolvedValueOnce({ id: "user-1", telegramId: "42" })

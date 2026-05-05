@@ -238,17 +238,17 @@ export async function handleNaturalLanguageMessage(input: {
     firstName: input.firstName,
   });
 
-  await saveConversationMessage({
-    userId: user.id,
-    role: "user",
-    content: input.text,
-  });
-
   const answer = await runAgent({
     telegramUserId: input.telegramId,
     message: input.text,
   });
   const formattedAnswer = formatTelegramPlainText(answer);
+
+  await saveConversationMessage({
+    userId: user.id,
+    role: "user",
+    content: input.text,
+  });
 
   await saveConversationMessage({
     userId: user.id,

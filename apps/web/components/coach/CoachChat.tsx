@@ -1,51 +1,104 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { QuickCommands } from "./QuickCommands";
 import { Icon } from "@/components/ui/Icon";
-import type { UserSettings } from "@/lib/health/types";
 
 type Message = {
+  id: string;
   role: "user" | "coach";
   text: string;
 };
 
-function respond(command: string, settings: UserSettings): string {
-  const normalized = command.toLowerCase();
+type ApiMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+};
 
-  if (normalized.includes("pain")) {
-    return "If pain is sharp, worsening, persistent, or changes your form, skip training today. For chest pain, dizziness, fainting, or unusual shortness of breath, stop exercise and seek medical advice.";
-  }
-  if (normalized.includes("tired") || normalized.includes("recovery")) {
-    return "Keep today easy. Low recovery usually comes from sleep debt, elevated resting HR, or load stacking. I would avoid intervals until recovery is back above 75.";
-  }
-  if (normalized.includes("interval")) {
-    return "Use one controlled VO2 session this week only if recovery and sleep are stable: 10 min warm-up, 5 x 2 min hard / 2 min easy, 10 min cool-down. Hard reps should feel controlled, not all-out.";
-  }
-  if (normalized.includes("last run")) {
-    return "Last run was a long easy run with mostly Zone 2 work. Load was meaningful but not excessive. Good aerobic base session; keep the next run relaxed.";
-  }
-  if (normalized.includes("today")) {
-    return `Today should stay easy unless recovery is strong and load is steady. If effort feels unusually high at ${settings.preferredEasyHrRange}, switch to a walk or rest.`;
-  }
+const introMessage: Message = {
+  id: "intro",
+  role: "coach",
+  text: "Ask for a plan adjustment, last-run analysis, or whether to run today. I will keep answers tied to training data.",
+};
 
-  return "For MVP I use deterministic coaching rules, not a live LLM. The recommendation is based on recovery, sleep, HR-zone load, and the weekly plan.";
+function mapApiMessage(message: ApiMessage): Message {
+  return {
+    id: message.id,
+    role: message.role === "assistant" ? "coach" : "user",
+    text: message.content,
+  };
 }
 
-export function CoachChat({ settings }: { settings: UserSettings }) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "coach",
-      text: "Ask for a plan adjustment, last-run analysis, or whether to run today. I will keep answers tied to training data.",
-    },
-  ]);
+export function CoachChat() {
+  const [messages, setMessages] = useState<Message[]>([introMessage]);
   const [draft, setDraft] = useState("");
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function send(text: string) {
+  useEffect(() => {
+    let active = true;
+
+    async function loadHistory() {
+      try {
+        const response = await fetch("/api/coach/chat", { cache: "no-store" });
+        if (!response.ok) throw new Error("Failed to load chat history");
+        const data = (await response.json()) as { messages?: ApiMessage[] };
+        if (!active) return;
+        const history = (data.messages ?? []).map(mapApiMessage);
+        setMessages(history.length > 0 ? history : [introMessage]);
+      } catch (cause) {
+        if (!active) return;
+        setError(cause instanceof Error ? cause.message : "Failed to load chat history");
+      } finally {
+        if (active) setLoadingHistory(false);
+      }
+    }
+
+    void loadHistory();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function send(text: string) {
     const trimmed = text.trim();
-    if (!trimmed) return;
-    setMessages((current) => [...current, { role: "user", text: trimmed }, { role: "coach", text: respond(trimmed, settings) }]);
+    if (!trimmed || sending) return;
+
+    const optimisticMessage: Message = {
+      id: `local-${Date.now()}`,
+      role: "user",
+      text: trimmed,
+    };
+
+    setError(null);
     setDraft("");
+    setSending(true);
+    setMessages((current) => [...current.filter((message) => message.id !== "intro"), optimisticMessage]);
+
+    try {
+      const response = await fetch("/api/coach/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: trimmed }),
+      });
+      const data = (await response.json()) as { answer?: string; message?: ApiMessage; error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Failed to get coach response");
+
+      const coachMessage: Message = data.message
+        ? mapApiMessage(data.message)
+        : {
+            id: `coach-${Date.now()}`,
+            role: "coach",
+            text: data.answer ?? "I could not produce a response.",
+          };
+      setMessages((current) => [...current, coachMessage]);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Failed to get coach response");
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -63,14 +116,16 @@ export function CoachChat({ settings }: { settings: UserSettings }) {
         <QuickCommands onCommand={send} />
       </div>
       <div className="mt-6 space-y-3">
+        {loadingHistory ? <p className="text-sm font-medium leading-6 text-[#818ba0]">Loading chat history...</p> : null}
         {messages.map((message, index) => (
-          <div key={`${message.role}-${index}`} className={message.role === "coach" ? "pr-8" : "pl-8"}>
+          <div key={`${message.id}-${index}`} className={message.role === "coach" ? "pr-8" : "pl-8"}>
             <p className={message.role === "coach" ? "rounded-bl-sm rounded-2xl bg-[#edf5ff] p-4 text-sm font-medium leading-6 text-[#3d4966]" : "rounded-br-sm rounded-2xl bg-[#0f67fe] p-4 text-sm font-bold leading-6 text-white"}>
               {message.text}
             </p>
           </div>
         ))}
       </div>
+      {error ? <p className="mt-4 rounded-xl bg-[#ffe7ea] p-4 text-sm font-bold leading-6 text-[#fa4d5e]">{error}</p> : null}
       <form
         className="mt-5 flex gap-2"
         onSubmit={(event) => {
@@ -82,9 +137,10 @@ export function CoachChat({ settings }: { settings: UserSettings }) {
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           placeholder="Ask the coach..."
+          disabled={sending}
           className="min-w-0 flex-1 rounded-xl bg-[#f2f5f9] px-4 py-3 text-sm font-semibold text-[#3d4966] outline-none ring-1 ring-transparent focus:ring-[#0f67fe]"
         />
-        <button type="submit" className="flex size-12 items-center justify-center rounded-xl bg-[#001441] text-white">
+        <button type="submit" disabled={sending || draft.trim().length === 0} className="flex size-12 items-center justify-center rounded-xl bg-[#001441] text-white disabled:cursor-not-allowed disabled:bg-[#818ba0]">
           <Icon name="send" />
         </button>
       </form>

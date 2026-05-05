@@ -13,10 +13,10 @@ export default async function CoachPage() {
       <div>
         <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#818ba0]">Coach</p>
         <h1 className="mt-2 text-4xl font-extrabold tracking-[-0.05em] text-[#090e1d]">Ask for actions, not generic wellness advice.</h1>
-        <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-[#3d4966]">MVP uses local deterministic responses. OpenRouter can later explain decisions, but training changes should still come from the training engine.</p>
+        <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-[#3d4966]">Chat uses OpenRouter for explanation and conversation, while concrete training decisions stay grounded in deterministic training engine outputs.</p>
       </div>
       <div className="grid gap-5 lg:grid-cols-[1fr_20rem]">
-        <CoachChat settings={data.settings} />
+        <CoachChat />
         <div className="space-y-5">
           <CoachContextPanel settings={data.settings} />
           <DecisionLog />

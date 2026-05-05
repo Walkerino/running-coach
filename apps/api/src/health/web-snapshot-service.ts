@@ -181,7 +181,7 @@ function roundedAverage(values: Array<number | null | undefined>) {
   return Math.round(present.reduce((sum, value) => sum + value, 0) / present.length);
 }
 
-async function resolveUser(input: { userId?: string; telegramId?: string }) {
+export async function resolveUser(input: { userId?: string; telegramId?: string }) {
   if (input.userId) return prisma.user.findUnique({ where: { id: input.userId } });
   if (input.telegramId) return prisma.user.findUnique({ where: { telegramId: input.telegramId } });
 

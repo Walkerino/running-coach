@@ -2,9 +2,12 @@ import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 
 import { env } from "../config/env.js";
+import { runAgent } from "../agent/agent-service.js";
+import { getRecentConversation, saveConversationMessage } from "../services/conversation-service.js";
 import {
   deleteTrainingPlanCompletion,
   getWebHealthSnapshot,
+  resolveUser,
   setTrainingPlanCompletion,
   updateWebHrZones,
 } from "../health/web-snapshot-service.js";
@@ -39,6 +42,12 @@ const completionBodySchema = z.object({
   title: z.string().optional(),
 });
 
+const chatBodySchema = z.object({
+  userId: z.string().optional(),
+  telegramId: z.string().optional(),
+  message: z.string().trim().min(1).max(4000),
+});
+
 function verifyAdmin(request: { headers: Record<string, unknown> }) {
   return request.headers["x-admin-api-key"] === env.ADMIN_API_KEY;
 }
@@ -70,6 +79,62 @@ export async function registerWebRoutes(app: FastifyInstance) {
     }
 
     return snapshot;
+  });
+
+  app.get("/web/chat/messages", async (request) => {
+    const query = userQuerySchema.parse(request.query);
+    const user = await resolveUser(query);
+    if (!user) {
+      throw app.httpErrors.notFound("User not found. Provide userId or telegramId when the database has multiple users.");
+    }
+
+    const messages = await getRecentConversation(user.id, 20);
+    return {
+      messages: messages
+        .filter((message: (typeof messages)[number]) => message.role === "user" || message.role === "assistant")
+        .map((message: (typeof messages)[number]) => ({
+          id: message.id,
+          role: message.role,
+          content: message.content,
+          createdAt: message.createdAt.toISOString(),
+        })),
+    };
+  });
+
+  app.post("/web/chat", async (request) => {
+    const body = chatBodySchema.parse(request.body);
+    const user = await resolveUser(body);
+    if (!user) {
+      throw app.httpErrors.notFound("User not found. Provide userId or telegramId when the database has multiple users.");
+    }
+
+    const answer = await runAgent({
+      userId: user.id,
+      message: body.message,
+    });
+
+    await saveConversationMessage({
+      userId: user.id,
+      role: "user",
+      content: body.message,
+      metadataJson: { surface: "web" },
+    });
+    const assistantMessage = await saveConversationMessage({
+      userId: user.id,
+      role: "assistant",
+      content: answer,
+      metadataJson: { surface: "web" },
+    });
+
+    return {
+      answer,
+      message: {
+        id: assistantMessage.id,
+        role: "assistant",
+        content: assistantMessage.content,
+        createdAt: assistantMessage.createdAt.toISOString(),
+      },
+    };
   });
 
   app.patch("/web/settings/hr-zones", async (request) => {

@@ -24,7 +24,7 @@ If needed data is missing, say exactly what is missing and give a conservative f
 Do not provide medical diagnosis.
 If the user reports chest pain, dizziness, unusual shortness of breath, fainting, sharp pain, or other concerning symptoms, recommend stopping training and seeking medical advice.
 For training recommendations, prefer safe progressive overload.
-For this user, easy running is usually HR 130–140 bpm.
+Use the configured heart-rate zones and easy HR range from deterministic context when present.
 The user’s goal is to improve VO2max toward 50.
 Use intervals at most once per week unless explicitly configured otherwise.
 Keep answers concise, practical, and actionable.
@@ -126,6 +126,16 @@ async function buildTrainingContext(userId: string) {
         goal: true,
         usualEasyHrMin: true,
         usualEasyHrMax: true,
+        hrZone1Min: true,
+        hrZone1Max: true,
+        hrZone2Min: true,
+        hrZone2Max: true,
+        hrZone3Min: true,
+        hrZone3Max: true,
+        hrZone4Min: true,
+        hrZone4Max: true,
+        hrZone5Min: true,
+        hrZone5Max: true,
         runningFrequencyPerWeek: true,
         preferredRunTime: true,
       },
@@ -148,10 +158,12 @@ async function buildTrainingContext(userId: string) {
   };
 }
 
-export async function runAgent(input: { telegramUserId: string; message: string }) {
-  const user = await prisma.user.findUnique({
-    where: { telegramId: input.telegramUserId },
-  });
+export async function runAgent(input: { userId?: string; telegramUserId?: string; message: string }) {
+  const user = input.userId
+    ? await prisma.user.findUnique({ where: { id: input.userId } })
+    : input.telegramUserId
+      ? await prisma.user.findUnique({ where: { telegramId: input.telegramUserId } })
+      : null;
 
   if (!user) {
     throw new Error("User not found");
@@ -160,7 +172,7 @@ export async function runAgent(input: { telegramUserId: string; message: string 
   const history = await getRecentConversation(user.id, 8);
   const messages: LlmMessage[] = [
     { role: "system", content: systemPrompt },
-    ...history.slice(-4).map((item: (typeof history)[number]): LlmMessage => ({
+    ...history.map((item: (typeof history)[number]): LlmMessage => ({
       role: item.role === "assistant" ? "assistant" : "user",
       content: item.content,
     })),
