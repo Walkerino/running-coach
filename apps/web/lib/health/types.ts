@@ -163,6 +163,14 @@ export type HealthDataSnapshot = {
   };
 };
 
+export type TrainingPlanOverride = {
+  weekStart: string;
+  days: TrainingPlanDay[];
+  rationale: string[];
+  source: "chat" | "local_mock" | "manual";
+  updatedAt: string;
+};
+
 export interface HealthDataSource {
   name: HealthDataSourceName;
   getSnapshot(): Promise<HealthDataSnapshot>;

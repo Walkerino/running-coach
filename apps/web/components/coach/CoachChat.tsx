@@ -143,17 +143,17 @@ export function CoachChat() {
   }
 
   return (
-    <section className="ask-card flex h-[calc(100svh-7rem)] min-h-[32rem] flex-col p-5 lg:h-full lg:min-h-0">
-      <div className="flex shrink-0 items-center justify-between gap-3">
+    <section className="ask-card flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4 lg:p-5">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#edf5ff] px-1 pb-3">
         <div>
           <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#818ba0]">Action-based coach</p>
-          <h2 className="mt-1 text-2xl font-extrabold tracking-[-0.05em] text-[#090e1d]">Coach chat</h2>
+          <h1 className="mt-1 text-xl font-extrabold tracking-[-0.04em] text-[#090e1d] sm:text-2xl">Your personal coach</h1>
         </div>
-        <div className="flex size-12 items-center justify-center rounded-xl bg-[#edf5ff] text-[#0f67fe]">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#edf5ff] text-[#0f67fe]">
           <Icon name="chat" />
         </div>
       </div>
-      <div className="mt-6 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-1 py-4">
         {loadingHistory ? <p className="text-sm font-medium leading-6 text-[#818ba0]">Loading chat history...</p> : null}
         {messagesWithDates.map(({ message, showDate, dateLabel }, index) => (
           <Fragment key={`${message.id}-${index}`}>
@@ -164,8 +164,8 @@ export function CoachChat() {
                 </span>
               </div>
             ) : null}
-            <div ref={index === messagesWithDates.length - 1 ? latestMessageRef : null} className={message.role === "coach" ? "pr-8" : "pl-8"}>
-              <p className={message.role === "coach" ? "rounded-bl-sm rounded-2xl bg-[#edf5ff] p-4 text-sm font-medium leading-6 text-[#3d4966]" : "rounded-br-sm rounded-2xl bg-[#0f67fe] p-4 text-sm font-bold leading-6 text-white"}>
+            <div ref={index === messagesWithDates.length - 1 ? latestMessageRef : null} className={message.role === "coach" ? "pr-6 sm:pr-16" : "pl-6 sm:pl-16"}>
+              <p className={message.role === "coach" ? "whitespace-pre-wrap break-words rounded-bl-sm rounded-2xl bg-[#edf5ff] p-4 text-sm font-medium leading-6 text-[#3d4966]" : "whitespace-pre-wrap break-words rounded-br-sm rounded-2xl bg-[#0f67fe] p-4 text-sm font-bold leading-6 text-white"}>
                 {message.text}
               </p>
             </div>
@@ -174,7 +174,7 @@ export function CoachChat() {
       </div>
       {error ? <p className="mt-4 rounded-xl bg-[#ffe7ea] p-4 text-sm font-bold leading-6 text-[#fa4d5e]">{error}</p> : null}
       <form
-        className="mt-5 flex shrink-0 gap-2"
+        className="flex shrink-0 gap-2 border-t border-[#edf5ff] px-1 pt-3"
         onSubmit={(event) => {
           event.preventDefault();
           send(draft);
@@ -185,9 +185,9 @@ export function CoachChat() {
           onChange={(event) => setDraft(event.target.value)}
           placeholder="Ask the coach..."
           disabled={sending}
-          className="min-w-0 flex-1 rounded-xl bg-[#f2f5f9] px-4 py-3 text-sm font-semibold text-[#3d4966] outline-none ring-1 ring-transparent focus:ring-[#0f67fe]"
+          className="min-w-0 flex-1 rounded-xl bg-[#f2f5f9] px-4 py-3 text-sm font-semibold text-[#3d4966] outline-none ring-1 ring-transparent transition focus:bg-white focus:ring-[#0f67fe]"
         />
-        <button type="submit" disabled={sending || draft.trim().length === 0} className="flex size-12 items-center justify-center rounded-xl bg-[#001441] text-white disabled:cursor-not-allowed disabled:bg-[#818ba0]">
+        <button type="submit" disabled={sending || draft.trim().length === 0} className="surface-interactive flex size-12 shrink-0 items-center justify-center rounded-xl bg-[#001441] text-white disabled:cursor-not-allowed disabled:bg-[#818ba0]">
           <Icon name="send" />
         </button>
       </form>

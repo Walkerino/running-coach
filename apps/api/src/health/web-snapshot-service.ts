@@ -456,3 +456,77 @@ export async function deleteTrainingPlanCompletion(input: {
 
   return { ok: true };
 }
+
+export async function getTrainingPlanOverride(input: {
+  userId?: string;
+  telegramId?: string;
+  weekStart: string;
+}) {
+  const user = await resolveUser(input);
+  if (!user) return null;
+
+  const override = await prisma.trainingPlanOverride.findUnique({
+    where: {
+      userId_weekStart: {
+        userId: user.id,
+        weekStart: toAppDate(input.weekStart, user.timezone),
+      },
+    },
+  });
+  if (!override) return null;
+
+  return {
+    ...(override.planJson as Record<string, unknown>),
+    weekStart: formatAppDate(override.weekStart, user.timezone),
+    rationale: override.rationaleJson ?? [],
+    source: override.source,
+    updatedAt: override.updatedAt.toISOString(),
+  };
+}
+
+export async function setTrainingPlanOverride(input: {
+  userId?: string;
+  telegramId?: string;
+  weekStart: string;
+  days: unknown;
+  rationale?: unknown;
+  source?: string;
+}) {
+  const user = await resolveUser(input);
+  if (!user) return null;
+
+  const weekStart = toAppDate(input.weekStart, user.timezone);
+  const planJson = {
+    weekStart: input.weekStart,
+    days: input.days,
+  };
+
+  const override = await prisma.trainingPlanOverride.upsert({
+    where: {
+      userId_weekStart: {
+        userId: user.id,
+        weekStart,
+      },
+    },
+    update: {
+      planJson: planJson as never,
+      rationaleJson: (input.rationale ?? []) as never,
+      source: input.source ?? "chat",
+    },
+    create: {
+      userId: user.id,
+      weekStart,
+      planJson: planJson as never,
+      rationaleJson: (input.rationale ?? []) as never,
+      source: input.source ?? "chat",
+    },
+  });
+
+  return {
+    weekStart: formatAppDate(override.weekStart, user.timezone),
+    days: (override.planJson as { days?: unknown }).days ?? [],
+    rationale: override.rationaleJson ?? [],
+    source: override.source,
+    updatedAt: override.updatedAt.toISOString(),
+  };
+}

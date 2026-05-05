@@ -1,10 +1,25 @@
-import { getHealthSnapshot } from "@/lib/health/api-data";
+import { HealthDataUnavailable } from "@/components/health/HealthDataUnavailable";
+import { getHealthSnapshot, isMissingAdminApiKeyError } from "@/lib/health/api-data";
 import { HrZonesForm } from "@/components/settings/HrZonesForm";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const data = await getHealthSnapshot();
+  let data;
+  try {
+    data = await getHealthSnapshot();
+  } catch (cause) {
+    if (isMissingAdminApiKeyError(cause)) {
+      return (
+        <HealthDataUnavailable
+          title="Settings data is unavailable."
+          message="Set ADMIN_API_KEY in the web runtime environment to load and save backend coaching settings."
+        />
+      );
+    }
+    throw cause;
+  }
+
   const settings = data.settings;
 
   return (

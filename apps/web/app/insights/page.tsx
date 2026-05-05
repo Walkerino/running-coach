@@ -1,5 +1,6 @@
+import { HealthDataUnavailable } from "@/components/health/HealthDataUnavailable";
 import { WeeklySummary } from "@/components/insights/WeeklySummary";
-import { getHealthSnapshot } from "@/lib/health/api-data";
+import { getHealthSnapshot, isMissingAdminApiKeyError } from "@/lib/health/api-data";
 import { getDaysBetween, getEffectiveToday } from "@/lib/health/dates";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,21 @@ function withinLastSevenDays(date: string, today: string): boolean {
 }
 
 export default async function InsightsPage() {
-  const data = await getHealthSnapshot();
+  let data;
+  try {
+    data = await getHealthSnapshot();
+  } catch (cause) {
+    if (isMissingAdminApiKeyError(cause)) {
+      return (
+        <HealthDataUnavailable
+          title="Weekly insights are unavailable."
+          message="Set ADMIN_API_KEY in the web runtime environment to load backend workout, sleep, and recovery summaries."
+        />
+      );
+    }
+    throw cause;
+  }
+
   const daily = getEffectiveToday(data);
   const workouts = data.workouts.filter((workout) => withinLastSevenDays(workout.date, daily.today));
   const sleep = data.sleep.filter((record) => withinLastSevenDays(record.date, daily.today));

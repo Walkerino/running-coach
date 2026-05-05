@@ -15,14 +15,22 @@ function getUserQuery() {
   return query ? `?${query}` : "";
 }
 
+export function shouldUseLocalMockDataFallback() {
+  return process.env.NODE_ENV === "development" && !process.env.ADMIN_API_KEY;
+}
+
 export function shouldUseMockHealthData() {
-  return process.env.USE_MOCK_HEALTH_DATA === "true";
+  return process.env.USE_MOCK_HEALTH_DATA === "true" || shouldUseLocalMockDataFallback();
+}
+
+export function isMissingAdminApiKeyError(cause: unknown) {
+  return cause instanceof Error && cause.message.includes("ADMIN_API_KEY is required");
 }
 
 export async function apiFetch(path: string, init: RequestInit = {}) {
   const adminApiKey = process.env.ADMIN_API_KEY;
   if (!adminApiKey) {
-    throw new Error("ADMIN_API_KEY is required for web API access");
+    throw new Error("ADMIN_API_KEY is required for web API access. Set ADMIN_API_KEY in .env, or set USE_MOCK_HEALTH_DATA=true for local demo data.");
   }
 
   return fetch(`${getApiBaseUrl()}${path}`, {

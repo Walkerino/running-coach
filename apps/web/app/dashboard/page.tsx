@@ -5,7 +5,8 @@ import { RecoveryCard } from "@/components/dashboard/RecoveryCard";
 import { SleepCard } from "@/components/dashboard/SleepCard";
 import { TodayRecommendationCard } from "@/components/dashboard/TodayRecommendationCard";
 import { Vo2MaxCard } from "@/components/dashboard/Vo2MaxCard";
-import { getHealthSnapshot } from "@/lib/health/api-data";
+import { HealthDataUnavailable } from "@/components/health/HealthDataUnavailable";
+import { getHealthSnapshot, isMissingAdminApiKeyError } from "@/lib/health/api-data";
 import { getDaysBetween, getEffectiveToday, getWeekStart } from "@/lib/health/dates";
 import { calculateAcuteLoad, calculateChronicLoad, calculateTrainingLoadStatus } from "@/lib/health/load";
 import { generateWeeklyPlan } from "@/lib/health/plan";
@@ -17,7 +18,21 @@ import type { Workout } from "@/lib/health/types";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const data = await getHealthSnapshot();
+  let data;
+  try {
+    data = await getHealthSnapshot();
+  } catch (cause) {
+    if (isMissingAdminApiKeyError(cause)) {
+      return (
+        <HealthDataUnavailable
+          title="Backend API access is not configured."
+          message="Set ADMIN_API_KEY in the web runtime environment to read real backend health data. For local UI demo only, set USE_MOCK_HEALTH_DATA=true explicitly."
+        />
+      );
+    }
+    throw cause;
+  }
+
   if (data.meta && !data.meta.hasRealData) {
     return <NoHealthDataDashboard source={data.source} />;
   }

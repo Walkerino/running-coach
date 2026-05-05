@@ -6,9 +6,11 @@ import { runAgent } from "../agent/agent-service.js";
 import { getRecentConversation, saveConversationMessage } from "../services/conversation-service.js";
 import {
   deleteTrainingPlanCompletion,
+  getTrainingPlanOverride,
   getWebHealthSnapshot,
   resolveUser,
   setTrainingPlanCompletion,
+  setTrainingPlanOverride,
   updateWebHrZones,
 } from "../health/web-snapshot-service.js";
 
@@ -40,6 +42,33 @@ const completionBodySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   workoutType: z.string().min(1),
   title: z.string().optional(),
+});
+
+const planOverrideQuerySchema = userQuerySchema.extend({
+  weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+const trainingPlanDaySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  dayName: z.string().min(1),
+  workoutType: z.string().min(1),
+  title: z.string().min(1),
+  durationMinutes: z.number().int().positive().optional(),
+  distanceKm: z.number().positive().optional(),
+  targetZone: z.string().optional(),
+  targetHrRange: z.string().optional(),
+  description: z.string().min(1),
+  coachNote: z.string().min(1),
+  status: z.enum(["ready", "adjust", "skip", "completed"]),
+});
+
+const planOverrideBodySchema = z.object({
+  userId: z.string().optional(),
+  telegramId: z.string().optional(),
+  weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  days: z.array(trainingPlanDaySchema).length(7),
+  rationale: z.array(z.string()).default([]),
+  source: z.string().optional(),
 });
 
 const chatBodySchema = z.object({
@@ -169,5 +198,25 @@ export async function registerWebRoutes(app: FastifyInstance) {
     }
 
     return result;
+  });
+
+  app.get("/web/training-plan-override", async (request) => {
+    const query = planOverrideQuerySchema.parse(request.query);
+    const override = await getTrainingPlanOverride(query);
+    if (!override) {
+      throw app.httpErrors.notFound("Training plan override not found");
+    }
+
+    return override;
+  });
+
+  app.post("/web/training-plan-override", async (request) => {
+    const body = planOverrideBodySchema.parse(request.body);
+    const override = await setTrainingPlanOverride(body);
+    if (!override) {
+      throw app.httpErrors.notFound("User not found");
+    }
+
+    return override;
   });
 }
