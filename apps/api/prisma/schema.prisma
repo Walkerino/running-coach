@@ -44,6 +44,16 @@ model User {
   goal                   String?
   usualEasyHrMin         Int?
   usualEasyHrMax         Int?
+  hrZone1Min             Int?
+  hrZone1Max             Int?
+  hrZone2Min             Int?
+  hrZone2Max             Int?
+  hrZone3Min             Int?
+  hrZone3Max             Int?
+  hrZone4Min             Int?
+  hrZone4Max             Int?
+  hrZone5Min             Int?
+  hrZone5Max             Int?
   runningFrequencyPerWeek Int?
   preferredRunTime       String?
   healthExportToken      String                @unique
@@ -56,6 +66,7 @@ model User {
   healthPayloadImports   HealthPayloadImport[]
   healthWorkouts         HealthWorkout[]
   readinessScores        ReadinessScore[]
+  trainingPlanCompletions TrainingPlanCompletion[]
   conversationMessages   ConversationMessage[]
   subjectiveFeedback     SubjectiveFeedback[]
 }
@@ -194,6 +205,20 @@ model ReadinessScore {
   user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model TrainingPlanCompletion {
+  id          String   @id @default(cuid())
+  userId      String
+  date        DateTime
+  workoutType String
+  title       String?
+  completedAt DateTime @default(now())
+  source      String   @default("web")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, workoutType])
   @@index([userId, date])
 }
 

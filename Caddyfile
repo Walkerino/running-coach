@@ -1,4 +1,8 @@
 {$PUBLIC_BASE_URL_HOSTNAME} {
   encode gzip zstd
-  reverse_proxy app:3000
+
+  @api path /health /healthz /telegram/* /webhooks/* /auth/* /admin/*
+  reverse_proxy @api app:3000
+
+  reverse_proxy web:3001
 }

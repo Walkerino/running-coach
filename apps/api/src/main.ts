@@ -12,6 +12,7 @@ import { registerHealthRoutes } from "./routes/health.js";
 import { registerHealthAutoExportRoutes } from "./routes/health-auto-export.js";
 import { registerStravaWebhookRoutes } from "./routes/strava-webhook.js";
 import { registerTelegramRoutes } from "./routes/telegram.js";
+import { registerWebRoutes } from "./routes/web.js";
 import { bot } from "./telegram/bot.js";
 
 const app = Fastify({
@@ -31,6 +32,7 @@ await registerAuthRoutes(app);
 await registerStravaWebhookRoutes(app);
 await registerHealthAutoExportRoutes(app);
 await registerAdminRoutes(app);
+await registerWebRoutes(app);
 
 app.setErrorHandler((error: unknown, _request: any, reply: any) => {
   app.log.error({ err: error }, "Request failed");

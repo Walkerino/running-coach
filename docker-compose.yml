@@ -14,6 +14,23 @@ services:
     ports:
       - "3000:3000"
 
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      NODE_ENV: production
+      INTERNAL_API_BASE_URL: http://app:3000
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
+      WEB_USER_ID: ${WEB_USER_ID:-}
+      WEB_TELEGRAM_ID: ${WEB_TELEGRAM_ID:-}
+      USE_MOCK_HEALTH_DATA: "false"
+    depends_on:
+      - app
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+
   postgres:
     image: postgres:16-alpine
     environment:
@@ -35,6 +52,7 @@ services:
     image: caddy:2.9-alpine
     depends_on:
       - app
+      - web
     environment:
       PUBLIC_BASE_URL_HOSTNAME: ${PUBLIC_BASE_URL_HOSTNAME}
     ports:

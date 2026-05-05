@@ -6,6 +6,8 @@ Telegram-first personal AI running and health assistant with Strava, Apple Healt
 
 - TypeScript / Node.js
 - Fastify
+- Next.js App Router frontend
+- Tailwind CSS
 - grammY
 - PostgreSQL + Prisma
 - OpenRouter chat completions over HTTPS
@@ -22,6 +24,10 @@ Telegram-first personal AI running and health assistant with Strava, Apple Healt
   /src
   /prisma
   /tests
+/apps/web
+  /app
+  /components
+  /lib/health
 docker-compose.yml
 Caddyfile
 .env.example
@@ -51,11 +57,25 @@ npm run prisma:migrate
 npm run dev
 ```
 
-5. Or start the full stack:
+5. Start the web app locally:
+
+```bash
+npm run dev:web
+```
+
+6. Build the web app:
+
+```bash
+npm run build:web
+```
+
+7. Or start the full stack:
 
 ```bash
 docker compose up --build
 ```
+
+The web app reads aggregated health data from the API/database by default. Mock data is used only when `USE_MOCK_HEALTH_DATA=true`.
 
 ## Telegram Setup
 
@@ -137,6 +157,13 @@ export PUBLIC_BASE_URL_HOSTNAME=your-domain.com
 ```bash
 docker compose up -d --build
 ```
+
+This starts:
+
+- `app`: Fastify API, Apple Health/Strava ingestion, readiness engine, migrations.
+- `web`: Next.js dashboard. It calls the API internally through `INTERNAL_API_BASE_URL=http://app:3000`.
+- `postgres`: database.
+- `caddy`: public reverse proxy. UI routes go to `web`; API/webhook routes go to `app`.
 
 6. Check logs:
 
