@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { QuickCommands } from "./QuickCommands";
 import { Icon } from "@/components/ui/Icon";
+import type { UserSettings } from "@/lib/health/types";
 
 type Message = {
   role: "user" | "coach";
   text: string;
 };
 
-function respond(command: string): string {
+function respond(command: string, settings: UserSettings): string {
   const normalized = command.toLowerCase();
 
   if (normalized.includes("pain")) {
@@ -25,13 +26,13 @@ function respond(command: string): string {
     return "Last run was a long easy run with mostly Zone 2 work. Load was meaningful but not excessive. Good aerobic base session; keep the next run relaxed.";
   }
   if (normalized.includes("today")) {
-    return "Today should stay easy unless recovery is strong and load is steady. If effort feels unusually high at 130-140 bpm, switch to a walk or rest.";
+    return `Today should stay easy unless recovery is strong and load is steady. If effort feels unusually high at ${settings.preferredEasyHrRange}, switch to a walk or rest.`;
   }
 
   return "For MVP I use deterministic coaching rules, not a live LLM. The recommendation is based on recovery, sleep, HR-zone load, and the weekly plan.";
 }
 
-export function CoachChat() {
+export function CoachChat({ settings }: { settings: UserSettings }) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "coach",
@@ -43,7 +44,7 @@ export function CoachChat() {
   function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed) return;
-    setMessages((current) => [...current, { role: "user", text: trimmed }, { role: "coach", text: respond(trimmed) }]);
+    setMessages((current) => [...current, { role: "user", text: trimmed }, { role: "coach", text: respond(trimmed, settings) }]);
     setDraft("");
   }
 

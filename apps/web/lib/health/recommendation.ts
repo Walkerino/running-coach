@@ -1,4 +1,4 @@
-import type { TodayRecommendation, TrainingLoadStatus, TrainingPlanDay } from "./types";
+import type { TodayRecommendation, TrainingLoadStatus, TrainingPlanDay, UserSettings } from "./types";
 
 type RecommendationInput = {
   plannedWorkout?: TrainingPlanDay;
@@ -7,7 +7,13 @@ type RecommendationInput = {
   loadStatus: TrainingLoadStatus;
   recentHardWorkoutDaysAgo?: number;
   injuryNotes?: string;
+  settings: UserSettings;
 };
+
+function hrRange(input: RecommendationInput, zone: "z1" | "z2") {
+  const range = input.settings.hrZones[zone];
+  return `${range.min}-${range.max} bpm`;
+}
 
 export function generateTodayRecommendation(input: RecommendationInput): TodayRecommendation {
   const planned = input.plannedWorkout;
@@ -39,7 +45,7 @@ export function generateTodayRecommendation(input: RecommendationInput): TodayRe
       workoutType: "Recovery run or walk",
       durationMinutes: 20,
       targetZone: "Z1",
-      targetHrRange: "100-130 bpm",
+      targetHrRange: hrRange(input, "z1"),
       status: "skip",
       reason: "7-day load is well above baseline, so fatigue risk is elevated.",
     };
@@ -62,7 +68,7 @@ export function generateTodayRecommendation(input: RecommendationInput): TodayRe
       workoutType: "Easy Run",
       durationMinutes: 30,
       targetZone: "Z2",
-      targetHrRange: "130-140 bpm",
+      targetHrRange: hrRange(input, "z2"),
       status: "adjust",
       reason: "Intervals are reduced because recovery or load is not ideal for intensity.",
     };

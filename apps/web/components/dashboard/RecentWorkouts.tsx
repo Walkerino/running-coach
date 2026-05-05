@@ -16,10 +16,10 @@ function ZoneBar({ workout }: { workout: Workout }) {
 
 export function RecentWorkouts({ workouts }: { workouts: Workout[] }) {
   return (
-    <MetricCard title="Recent Workouts" className="lg:col-span-2">
+    <MetricCard title="Recent Workouts" eyebrow="Last 7 days" className="lg:col-span-2">
       <div className="grid gap-3">
-        {workouts.length === 0 ? <p className="text-sm font-medium leading-6 text-[#3d4966]">No workouts imported yet.</p> : null}
-        {workouts.slice(0, 5).map((workout) => (
+        {workouts.length === 0 ? <p className="text-sm font-medium leading-6 text-[#3d4966]">No workouts imported for the last 7 days.</p> : null}
+        {workouts.map((workout) => (
           <article key={workout.id} className="rounded-2xl bg-[#f2f5f9] p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { HrZoneKey, HrZones } from "@/lib/health/types";
 import { getDefaultHrZones } from "@/lib/health/zones";
 
@@ -51,15 +52,22 @@ function validateZones(zones: HrZones): string | null {
 }
 
 export function HrZonesForm({ initialZones, age, persistMode }: HrZonesFormProps) {
+  const router = useRouter();
   const [zones, setZones] = useState<HrZones>(() => cloneZones(initialZones));
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const validationError = useMemo(() => validateZones(zones), [zones]);
 
   useEffect(() => {
+    if (persistMode !== "local") {
+      window.localStorage.removeItem(storageKey);
+      setZones(cloneZones(initialZones));
+      return;
+    }
+
     const stored = parseStoredZones(window.localStorage.getItem(storageKey));
     if (stored) setZones(cloneZones(stored));
-  }, []);
+  }, [initialZones, persistMode]);
 
   function updateZone(zone: HrZoneKey, field: "min" | "max", value: string) {
     const parsed = Number(value);
@@ -85,6 +93,8 @@ export function HrZonesForm({ initialZones, age, persistMode }: HrZonesFormProps
           body: JSON.stringify({ hrZones: zones }),
         });
         if (!response.ok) throw new Error("Failed to save zones to backend");
+        window.localStorage.removeItem(storageKey);
+        router.refresh();
       } else {
         window.localStorage.setItem(storageKey, JSON.stringify(zones));
       }
@@ -110,7 +120,11 @@ export function HrZonesForm({ initialZones, age, persistMode }: HrZonesFormProps
             Set zones manually in bpm. 220 - age is only a rough default; your actual zones can be customized.
           </p>
         </div>
-        {saved ? <span className="rounded-md bg-[#e7fff8] px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#0b8b64]">Saved locally</span> : null}
+        {saved ? (
+          <span className="rounded-md bg-[#e7fff8] px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#0b8b64]">
+            {persistMode === "api" ? "Saved to server" : "Saved locally"}
+          </span>
+        ) : null}
       </div>
 
       <div className="mt-5 grid gap-3 md:grid-cols-5">

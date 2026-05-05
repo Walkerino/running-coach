@@ -40,6 +40,7 @@ export type Workout = {
 export type SleepRecord = {
   date: string;
   score: number;
+  scoreEstimated?: boolean;
   durationMinutes: number;
   interruptions?: number;
   respiratoryRate?: number;

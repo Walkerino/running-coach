@@ -27,6 +27,11 @@ function makeDay(weekStart: string, index: number, partial: Omit<TrainingPlanDay
   };
 }
 
+function hrRange(input: PlanInput, zone: "z1" | "z2" | "z4") {
+  const range = input.settings.hrZones[zone];
+  return `${range.min}-${range.max} bpm`;
+}
+
 export function generateWeeklyPlan(input: PlanInput): TrainingPlanDay[] {
   const conservative = input.loadStatus === "above" || input.loadStatus === "well_above";
   const allowIntervals =
@@ -51,7 +56,7 @@ export function generateWeeklyPlan(input: PlanInput): TrainingPlanDay[] {
       durationMinutes: easyMinutes,
       distanceKm: conservative ? 3.2 : 4.1,
       targetZone: "Z2",
-      targetHrRange: input.settings.preferredEasyHrRange,
+      targetHrRange: hrRange(input, "z2"),
       description: `${easyMinutes} min relaxed aerobic run.`,
       coachNote: "Keep it conversational; no pace target.",
       status: input.loadStatus === "well_above" ? "adjust" : "ready",
@@ -71,7 +76,7 @@ export function generateWeeklyPlan(input: PlanInput): TrainingPlanDay[] {
       durationMinutes: conservative ? 25 : 35,
       distanceKm: conservative ? 2.8 : 4.2,
       targetZone: conservative ? "Z1" : "Z2",
-      targetHrRange: conservative ? "100-130 bpm" : input.settings.preferredEasyHrRange,
+      targetHrRange: conservative ? hrRange(input, "z1") : hrRange(input, "z2"),
       description: conservative ? "Short, very easy run only if legs feel normal." : "Steady Zone 2 base run.",
       coachNote: conservative ? "Stop early if effort drifts up." : "Build consistency before intensity.",
       status: conservative ? "adjust" : "ready",
@@ -82,7 +87,7 @@ export function generateWeeklyPlan(input: PlanInput): TrainingPlanDay[] {
       durationMinutes: allowIntervals ? 42 : 30,
       distanceKm: allowIntervals ? 4.8 : 3.5,
       targetZone: allowIntervals ? "Z4" : "Z2",
-      targetHrRange: allowIntervals ? "160-180 bpm on hard reps" : input.settings.preferredEasyHrRange,
+      targetHrRange: allowIntervals ? `${hrRange(input, "z4")} on hard reps` : hrRange(input, "z2"),
       description: allowIntervals ? "10 min warm-up, 5 x 2 min hard / 2 min easy, 10 min cool-down." : "Replace intensity with easy aerobic work.",
       coachNote: allowIntervals ? "Hard means controlled, not all-out." : "Intervals skipped because recovery/load does not justify intensity.",
       status: allowIntervals ? "ready" : "adjust",
@@ -100,7 +105,7 @@ export function generateWeeklyPlan(input: PlanInput): TrainingPlanDay[] {
       durationMinutes: longRunMinutes,
       distanceKm: conservative ? 5.2 : 6.3,
       targetZone: "Z2",
-      targetHrRange: input.settings.preferredEasyHrRange,
+      targetHrRange: hrRange(input, "z2"),
       description: `${longRunMinutes} min easy, steady breathing.`,
       coachNote: conservative ? "Do not extend the long run this week." : "Small long-run exposure for aerobic base.",
       status: input.loadStatus === "well_above" ? "skip" : "ready",

@@ -26,9 +26,14 @@ export function SleepCard({ sleep }: { sleep?: SleepRecord }) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-5xl font-extrabold tracking-[-0.05em] text-[#090e1d]">{sleep.score}</p>
-          <p className="mt-2 text-sm font-semibold text-[#818ba0]">{formatMinutes(sleep.durationMinutes)} · stable bedtime</p>
+          <p className="mt-2 text-sm font-semibold text-[#818ba0]">
+            {sleep.date} · {formatMinutes(sleep.durationMinutes)}
+          </p>
         </div>
-        <StatusBadge label={quality(sleep.score)} tone={sleep.score >= 70 ? "green" : "amber"} />
+        <StatusBadge
+          label={sleep.scoreEstimated ? "Estimated" : quality(sleep.score)}
+          tone={sleep.scoreEstimated ? "neutral" : sleep.score >= 70 ? "green" : "amber"}
+        />
       </div>
       <div className="mt-5 flex h-14 items-end gap-2">
         {[28, 42, 36, 52, 46, 24, 32, 40].map((height, index) => (
@@ -36,7 +41,9 @@ export function SleepCard({ sleep }: { sleep?: SleepRecord }) {
         ))}
       </div>
       <p className="mt-5 text-sm font-medium leading-6 text-[#3d4966]">
-        Sleep score combines duration and continuity in mock data. Respiratory rate is shown only as a baseline factor, not a diagnosis.
+        {sleep.scoreEstimated
+          ? "No imported sleep score was found, so this is a duration-based estimate. Respiratory rate is shown only as a baseline factor, not a diagnosis."
+          : "Sleep score is taken from the imported health data. Respiratory rate is shown only as a baseline factor, not a diagnosis."}
       </p>
     </MetricCard>
   );
